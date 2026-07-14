@@ -1,0 +1,13 @@
+{
+  "name": "@sciagent/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "node scripts/forge-runner.cjs build",
+    "test": "node scripts/forge-runner.cjs test",
+    "coverage": "node scripts/forge-runner.cjs coverage --match-contract \"GrantTreasuryTest|MilestoneRegistryTest|ProjectRegistryTest|ReputationRegistryTest|ProtocolCoverageTest|ProtocolIntegrationTest\" --exclude-tests",
+    "fmt": "node scripts/forge-runner.cjs fmt",
+    "clean": "powershell -Command \"Remove-Item -Recurse -Force $env:TEMP\\sciagent-contracts,$env:TEMP\\forge-home,out,cache,broadcast,lcov.info -ErrorAction SilentlyContinue\""
+  }
+}
