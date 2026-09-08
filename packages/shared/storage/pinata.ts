@@ -1,10 +1,12 @@
-import { clientEnv } from '../env/client';
-import { serverEnv } from '../env/server';
+import { getClientEnv } from '../env/client';
+import { getServerEnv } from '../env/server';
 import type { PinataClientConfig, PinataUploadOptions, PinataUploadResult } from './types';
 
-export function createPinataGatewayUrl(cidOrPath: string, gatewayUrl = clientEnv.NEXT_PUBLIC_PINATA_GATEWAY_URL) {
+export function createPinataGatewayUrl(cidOrPath: string, gatewayUrl?: string) {
+  const env = getClientEnv();
+  const defaultGatewayUrl = gatewayUrl ?? env.NEXT_PUBLIC_PINATA_GATEWAY_URL;
   const normalized = cidOrPath.startsWith('ipfs/') ? cidOrPath : `ipfs/${cidOrPath}`;
-  return `${gatewayUrl.replace(/\/$/, '')}/${normalized}`;
+  return `${defaultGatewayUrl.replace(/\/$/, '')}/${normalized}`;
 }
 
 export function createPinataIpfsUrl(cidOrPath: string) {
@@ -13,12 +15,14 @@ export function createPinataIpfsUrl(cidOrPath: string) {
 
 function getPinataAuthHeaders(jwt: string) {
   return {
-    Authorization: `Bearer ${jwt}`
+    Authorization: `Bearer ${jwt}`,
   };
 }
 
-export function createPinataClient(config: PinataClientConfig = { jwt: serverEnv.PINATA_JWT }) {
-  const gatewayUrl = config.gatewayUrl ?? serverEnv.PINATA_GATEWAY_URL;
+export function createPinataClient(config: PinataClientConfig = {}) {
+  const env = getServerEnv();
+  const jwt = config.jwt ?? env.PINATA_JWT;
+  const gatewayUrl = config.gatewayUrl ?? env.PINATA_GATEWAY_URL;
 
   return {
     async uploadJson<TDocument extends Record<string, unknown>>(
@@ -29,13 +33,13 @@ export function createPinataClient(config: PinataClientConfig = { jwt: serverEnv
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getPinataAuthHeaders(config.jwt)
+          ...getPinataAuthHeaders(jwt),
         },
         body: JSON.stringify({
           pinataContent: document,
           pinataMetadata: options.metadata,
-          pinataOptions: options.pinataOptions
-        })
+          pinataOptions: options.pinataOptions,
+        }),
       });
 
       if (!response.ok) {
@@ -48,7 +52,7 @@ export function createPinataClient(config: PinataClientConfig = { jwt: serverEnv
       return {
         cid,
         url: createPinataIpfsUrl(cid),
-        gatewayUrl: createPinataGatewayUrl(cid, gatewayUrl)
+        gatewayUrl: createPinataGatewayUrl(cid, gatewayUrl),
       };
     },
     async uploadFile(file: Blob, options: PinataUploadOptions = {}): Promise<PinataUploadResult> {
@@ -65,8 +69,8 @@ export function createPinataClient(config: PinataClientConfig = { jwt: serverEnv
 
       const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
         method: 'POST',
-        headers: getPinataAuthHeaders(config.jwt),
-        body: formData
+        headers: getPinataAuthHeaders(jwt),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -79,11 +83,33 @@ export function createPinataClient(config: PinataClientConfig = { jwt: serverEnv
       return {
         cid,
         url: createPinataIpfsUrl(cid),
-        gatewayUrl: createPinataGatewayUrl(cid, gatewayUrl)
+        gatewayUrl: createPinataGatewayUrl(cid, gatewayUrl),
       };
     },
-    gatewayUrl
+    gatewayUrl,
   };
 }
 
-export const pinataClient = createPinataClient();
+let _cachedPinataClient: ReturnType<typeof createPinataClient> | null = null;
+
+export function getPinataClient(): ReturnType<typeof createPinataClient> {
+  if (!_cachedPinataClient) {
+    _cachedPinataClient = createPinataClient();
+  }
+  return _cachedPinataClient;
+}
+
+export function resetPinataClientCache(): void {
+  _cachedPinataClient = null;
+}
+
+// Lazy proxy for backwards compatibility — does not call getServerEnv() at import time
+export const pinataClient = new Proxy({} as ReturnType<typeof createPinataClient>, {
+  get(_target, prop) {
+    const client = getPinataClient();
+    const value = (client as unknown as Record<string | symbol, unknown>)[prop];
+    return typeof value === 'function'
+      ? (value as (...args: unknown[]) => unknown).bind(client)
+      : value;
+  },
+});

@@ -90,11 +90,11 @@ contract ProtocolCoverageTest is ProtocolTest {
 
     vm.expectRevert(abi.encodeWithSelector(NotProjectOwner.selector, projectId));
     vm.prank(bob);
-    grantTreasury.proposeExpense(projectId, payable(carol), 1 ether, hex"", "blocked");
+    grantTreasury.proposeExpense(projectId, payable(carol), 1 ether, "blocked");
 
     vm.expectRevert(EmptyValue.selector);
     vm.prank(alice);
-    grantTreasury.proposeExpense(projectId, payable(address(0)), 1 ether, hex"", "memo");
+    grantTreasury.proposeExpense(projectId, payable(address(0)), 1 ether, "memo");
 
     vm.expectRevert(abi.encodeWithSelector(ExpenseDoesNotExist.selector, 999));
     vm.prank(admin);
@@ -105,7 +105,6 @@ contract ProtocolCoverageTest is ProtocolTest {
       projectId,
       payable(bob),
       1 ether,
-      hex"",
       "seed the build"
     );
 
@@ -133,7 +132,6 @@ contract ProtocolCoverageTest is ProtocolTest {
       projectId,
       payable(bob),
       1 ether,
-      hex"",
       "unapproved"
     );
 
@@ -146,7 +144,6 @@ contract ProtocolCoverageTest is ProtocolTest {
       projectId,
       payable(bob),
       2 ether,
-      hex"",
       "underfunded"
     );
     vm.prank(admin);
@@ -166,7 +163,6 @@ contract ProtocolCoverageTest is ProtocolTest {
       fundedProjectId,
       payable(address(rejectingRecipient)),
       1 ether,
-      hex"",
       "failing"
     );
     vm.prank(admin);

@@ -30,12 +30,11 @@ function main() {
   ensureDirectory(localAppData);
   ensureDirectory(roamingAppData);
 
+  // Fixed: do not override HOME/USERPROFILE — that isolated forge from its
+  // solc cache at %USERPROFILE%/.foundry and caused network timeout on test.
+  // Pass through real env; only add temp dirs for out/cache.
   const env = {
-    ...process.env,
-    HOME: forgeHome,
-    USERPROFILE: forgeHome,
-    LOCALAPPDATA: localAppData,
-    APPDATA: roamingAppData,
+    ...process.env
   };
 
   const args = [command, '--root', packageRoot];

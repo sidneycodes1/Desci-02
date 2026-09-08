@@ -1,6 +1,6 @@
 import IORedis, { type RedisOptions } from 'ioredis';
 
-import { serverEnv } from '../env/server';
+import { getServerEnv } from '../env/server';
 
 let redisClient: IORedis | null = null;
 
@@ -13,24 +13,27 @@ export function createRedisOptions(overrides: RedisOptions = {}): RedisOptions {
     maxRetriesPerRequest: null,
     enableReadyCheck: true,
     retryStrategy: createRedisRetryStrategy,
-    ...overrides
+    ...overrides,
   };
 }
 
 export function getRedisClient() {
   if (!redisClient) {
-    redisClient = new IORedis(serverEnv.REDIS_URL, createRedisOptions());
+    const env = getServerEnv();
+    redisClient = new IORedis(env.REDIS_URL, createRedisOptions());
   }
 
   return redisClient;
 }
 
 export function createRedisClient(overrides: RedisOptions = {}) {
-  return new IORedis(serverEnv.REDIS_URL, createRedisOptions(overrides));
+  const env = getServerEnv();
+  return new IORedis(env.REDIS_URL, createRedisOptions(overrides));
 }
 
 export function createBullMqConnectionOptions() {
-  const connectionUrl = new URL(serverEnv.REDIS_URL);
+  const env = getServerEnv();
+  const connectionUrl = new URL(env.REDIS_URL);
 
   return {
     host: connectionUrl.hostname,
@@ -40,6 +43,6 @@ export function createBullMqConnectionOptions() {
     db: connectionUrl.pathname ? Number(connectionUrl.pathname.replace('/', '') || '0') : 0,
     maxRetriesPerRequest: null,
     enableReadyCheck: true,
-    retryStrategy: createRedisRetryStrategy
+    retryStrategy: createRedisRetryStrategy,
   } as const;
 }

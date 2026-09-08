@@ -1,4 +1,4 @@
-import { serverEnv } from '../env/server';
+import { getServerEnv } from '../env/server';
 import { selectModel } from './model-selection';
 import { generateGeminiText } from './gemini';
 import { generateOpenAIText } from './openai';
@@ -8,7 +8,7 @@ import type {
   AIProviderName,
   AIServiceFactoryConfig,
   AITextRequest,
-  AITextResponse
+  AITextResponse,
 } from './types';
 
 export function createAIServiceFactory(config: AIServiceFactoryConfig = {}) {
@@ -31,17 +31,18 @@ export function createAIServiceFactory(config: AIServiceFactoryConfig = {}) {
           prompt: request.prompt,
           systemPrompt: request.systemPrompt,
           temperature: request.temperature,
-          maxTokens: request.maxTokens
+          maxTokens: request.maxTokens,
         });
       }
 
+      const env = getServerEnv();
       return generateOpenAIText({
-        model: model || serverEnv.OPENAI_DEFAULT_MODEL,
+        model: model || env.OPENAI_DEFAULT_MODEL,
         prompt: request.prompt,
         systemPrompt: request.systemPrompt,
         temperature: request.temperature,
-        maxTokens: request.maxTokens
+        maxTokens: request.maxTokens,
       });
-    }
+    },
   };
 }

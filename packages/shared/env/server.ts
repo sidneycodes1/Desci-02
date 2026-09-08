@@ -24,13 +24,24 @@ export const serverEnvSchema = z.object({
   NEXT_PUBLIC_SENTRY_DSN: urlSchema,
   SENTRY_AUTH_TOKEN: trimmedString.optional(),
   SENTRY_ORG: trimmedString.optional(),
-  SENTRY_PROJECT: trimmedString.optional()
+  SENTRY_PROJECT: trimmedString.optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
+
+let _cachedServerEnv: ServerEnv | null = null;
 
 export function parseServerEnv(rawEnvironment: NodeJS.ProcessEnv = process.env): ServerEnv {
   return parseEnvironment(serverEnvSchema, rawEnvironment, 'server');
 }
 
-export const serverEnv = parseServerEnv();
+export function getServerEnv(): ServerEnv {
+  if (_cachedServerEnv === null) {
+    _cachedServerEnv = parseServerEnv();
+  }
+  return _cachedServerEnv;
+}
+
+export function resetServerEnvCache(): void {
+  _cachedServerEnv = null;
+}

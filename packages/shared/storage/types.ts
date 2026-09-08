@@ -21,6 +21,6 @@ export interface PinataUploadResult {
 }
 
 export interface PinataClientConfig {
-  jwt: string;
+  jwt?: string;
   gatewayUrl?: string;
 }

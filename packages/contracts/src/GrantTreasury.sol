@@ -29,7 +29,6 @@ contract GrantTreasury is AccessControl, Pausable, ReentrancyGuard {
     address proposer;
     address payable recipient;
     uint256 amount;
-    bytes callData;
     string memo;
     bool approved;
     bool executed;
@@ -97,7 +96,6 @@ contract GrantTreasury is AccessControl, Pausable, ReentrancyGuard {
     uint256 projectId,
     address payable recipient,
     uint256 amount,
-    bytes calldata callData,
     string calldata memo
   ) external whenNotPaused nonReentrant returns (uint256 expenseId) {
     _assertProjectOwnerOrRole(projectId, ProtocolRoles.TREASURY_PROPOSER_ROLE);
@@ -113,7 +111,6 @@ contract GrantTreasury is AccessControl, Pausable, ReentrancyGuard {
       proposer: msg.sender,
       recipient: recipient,
       amount: amount,
-      callData: callData,
       memo: memo,
       approved: false,
       executed: false,
@@ -157,7 +154,7 @@ contract GrantTreasury is AccessControl, Pausable, ReentrancyGuard {
     expense.executed = true;
     expense.executedAt = block.timestamp;
 
-    (bool success, ) = expense.recipient.call{value: expense.amount}(expense.callData);
+    (bool success, ) = expense.recipient.call{value: expense.amount}("");
     if (!success) {
       revert ExpenseExecutionFailed(expenseId);
     }

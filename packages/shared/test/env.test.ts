@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 
-import { parseClientEnv } from '../env/client';
-import { parseServerEnv } from '../env/server';
+import { parseClientEnv, resetClientEnvCache } from '../env/client';
+import { parseServerEnv, resetServerEnvCache } from '../env/server';
 
 const baseEnvironment = {
   NODE_ENV: 'test',
@@ -26,10 +26,14 @@ const baseEnvironment = {
   GEMINI_DEFAULT_MODEL: 'gemini-2.0-flash',
   SENTRY_AUTH_TOKEN: 'sentry_auth_token_example',
   SENTRY_ORG: 'sentry_org_example',
-  SENTRY_PROJECT: 'sentry_project_example'
+  SENTRY_PROJECT: 'sentry_project_example',
 } as const;
 
 describe('environment validation', () => {
+  beforeEach(() => {
+    resetClientEnvCache();
+    resetServerEnvCache();
+  });
   it('parses the client environment contract', () => {
     const env = parseClientEnv(baseEnvironment);
 
@@ -47,7 +51,7 @@ describe('environment validation', () => {
   it('fails fast when required variables are missing', () => {
     expect(() =>
       parseServerEnv({
-        NODE_ENV: 'test'
+        NODE_ENV: 'test',
       } as NodeJS.ProcessEnv)
     ).toThrow('[env] server validation failed');
   });

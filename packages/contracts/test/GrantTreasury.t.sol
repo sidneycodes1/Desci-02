@@ -15,7 +15,6 @@ contract GrantTreasuryTest is ProtocolTest {
       projectId,
       payable(bob),
       2 ether,
-      hex"",
       "seed the build"
     );
 
@@ -60,7 +59,6 @@ contract GrantTreasuryTest is ProtocolTest {
       projectId,
       payable(bob),
       1 ether,
-      hex"",
       "single payment"
     );
 

@@ -23,7 +23,6 @@ contract ProtocolIntegrationTest is ProtocolTest {
       projectId,
       payable(bob),
       3 ether,
-      hex"",
       "publish paper"
     );
 

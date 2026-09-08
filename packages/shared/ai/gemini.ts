@@ -1,4 +1,4 @@
-import { serverEnv } from '../env/server';
+import { getServerEnv } from '../env/server';
 import type { AITextResponse } from './types';
 
 export interface GeminiTextRequest {
@@ -10,30 +10,31 @@ export interface GeminiTextRequest {
 }
 
 export async function generateGeminiText(request: GeminiTextRequest): Promise<AITextResponse> {
+  const env = getServerEnv();
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${request.model}:generateContent?key=${serverEnv.GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${request.model}:generateContent?key=${env.GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         systemInstruction: request.systemPrompt
           ? {
-              parts: [{ text: request.systemPrompt }]
+              parts: [{ text: request.systemPrompt }],
             }
           : undefined,
         contents: [
           {
             role: 'user',
-            parts: [{ text: request.prompt }]
-          }
+            parts: [{ text: request.prompt }],
+          },
         ],
         generationConfig: {
           temperature: request.temperature,
-          maxOutputTokens: request.maxTokens
-        }
-      })
+          maxOutputTokens: request.maxTokens,
+        },
+      }),
     }
   );
 
@@ -49,12 +50,13 @@ export async function generateGeminiText(request: GeminiTextRequest): Promise<AI
     }>;
   };
 
-  const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('') ?? '';
+  const text =
+    payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('') ?? '';
 
   return {
     provider: 'gemini',
     model: request.model,
     text,
-    raw: payload
+    raw: payload,
   };
 }
