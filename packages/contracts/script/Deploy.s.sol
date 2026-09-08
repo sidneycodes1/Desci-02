@@ -8,7 +8,12 @@ import {MilestoneRegistry} from "../src/MilestoneRegistry.sol";
 import {ProjectRegistry} from "../src/ProjectRegistry.sol";
 import {ReputationRegistry} from "../src/ReputationRegistry.sol";
 
+/// @title DeployProtocol
+/// @notice Foundry deployment script wiring the four registries together.
+/// @dev Broadcasts with msg.sender as the initial admin of every contract.
+/// Phase 3 performs implementation and testing only — no network deployment.
 contract DeployProtocol is Script {
+  /// @notice Deployed contract addresses from a single run.
   struct Deployment {
     address projectRegistry;
     address grantTreasury;
@@ -16,6 +21,8 @@ contract DeployProtocol is Script {
     address reputationRegistry;
   }
 
+  /// @notice Deploy all contracts and return their addresses.
+  /// @return deployment Addresses of the four deployed contracts.
   function run() external returns (Deployment memory deployment) {
     vm.startBroadcast();
 
