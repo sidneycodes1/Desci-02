@@ -21,3 +21,4 @@ packages/contracts/out/
 packages/contracts/cache/
 packages/contracts/broadcast/
 packages/contracts/lcov.info
+packages/database/.local-pglite/
