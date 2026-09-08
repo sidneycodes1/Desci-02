@@ -14,14 +14,19 @@ import {
   ExpenseNotApproved,
   EmptyValue,
   InvalidAmount,
+  InvalidExpenseRecipient,
+  MemoTooLong,
   ProjectDoesNotExist,
   NotProjectOwner,
+  UnauthorizedExpenseExecution,
   ZeroAddress
 } from "./ProtocolErrors.sol";
 import {ProtocolRoles} from "./ProtocolRoles.sol";
 
 contract GrantTreasury is AccessControl, Pausable, ReentrancyGuard {
   using ProtocolRoles for bytes32;
+
+  uint256 public constant MAX_MEMO_LENGTH = 1024;
 
   struct Expense {
     uint256 id;
@@ -104,6 +109,15 @@ contract GrantTreasury is AccessControl, Pausable, ReentrancyGuard {
       revert EmptyValue();
     }
 
+    if (bytes(memo).length > MAX_MEMO_LENGTH) {
+      revert MemoTooLong(MAX_MEMO_LENGTH);
+    }
+
+    IProjectRegistry.Project memory project = projectRegistry.getProject(projectId);
+    if (recipient != project.owner) {
+      revert InvalidExpenseRecipient(projectId);
+    }
+
     expenseId = _nextExpenseId++;
     _expenses[expenseId] = Expense({
       id: expenseId,
@@ -144,6 +158,10 @@ contract GrantTreasury is AccessControl, Pausable, ReentrancyGuard {
 
     if (expense.executed) {
       revert ExpenseAlreadyExecuted(expenseId);
+    }
+
+    if (msg.sender != expense.proposer && !hasRole(ProtocolRoles.TREASURY_APPROVER_ROLE, msg.sender)) {
+      revert UnauthorizedExpenseExecution(expenseId);
     }
 
     if (projectBalances[expense.projectId] < expense.amount) {

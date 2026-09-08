@@ -21,7 +21,7 @@ contract ProtocolIntegrationTest is ProtocolTest {
     vm.prank(alice);
     uint256 expenseId = grantTreasury.proposeExpense(
       projectId,
-      payable(bob),
+      payable(alice),
       3 ether,
       "publish paper"
     );
@@ -29,7 +29,7 @@ contract ProtocolIntegrationTest is ProtocolTest {
     vm.prank(admin);
     grantTreasury.approveExpense(expenseId);
 
-    vm.prank(carol);
+    vm.prank(alice);
     grantTreasury.executeExpense(expenseId);
 
     vm.prank(alice);

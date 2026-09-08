@@ -16,9 +16,11 @@ import {
   MilestoneDoesNotExist,
   NotProjectOwner,
   ProjectDoesNotExist,
+  UnauthorizedExpenseExecution,
   ZeroAddress
 } from "../src/ProtocolErrors.sol";
 import {ReputationRegistry} from "../src/ReputationRegistry.sol";
+import {ProtocolRoles} from "../src/ProtocolRoles.sol";
 
 import {ProtocolTest} from "./ProtocolTest.sol";
 
@@ -90,7 +92,7 @@ contract ProtocolCoverageTest is ProtocolTest {
 
     vm.expectRevert(abi.encodeWithSelector(NotProjectOwner.selector, projectId));
     vm.prank(bob);
-    grantTreasury.proposeExpense(projectId, payable(carol), 1 ether, "blocked");
+    grantTreasury.proposeExpense(projectId, payable(alice), 1 ether, "blocked");
 
     vm.expectRevert(EmptyValue.selector);
     vm.prank(alice);
@@ -103,14 +105,14 @@ contract ProtocolCoverageTest is ProtocolTest {
     vm.prank(alice);
     uint256 expenseId = grantTreasury.proposeExpense(
       projectId,
-      payable(bob),
+      payable(alice),
       1 ether,
       "seed the build"
     );
 
     GrantTreasury.Expense memory expense = grantTreasury.getExpense(expenseId);
     _assertEqUint(expense.id, expenseId);
-    _assertEqAddress(expense.recipient, bob);
+    _assertEqAddress(expense.recipient, alice);
 
     vm.prank(admin);
     grantTreasury.approveExpense(expenseId);
@@ -130,19 +132,19 @@ contract ProtocolCoverageTest is ProtocolTest {
     vm.prank(admin);
     uint256 unapprovedExpenseId = grantTreasury.proposeExpense(
       projectId,
-      payable(bob),
+      payable(admin),
       1 ether,
       "unapproved"
     );
 
     vm.expectRevert(abi.encodeWithSelector(ExpenseNotApproved.selector, unapprovedExpenseId));
-    vm.prank(carol);
+    vm.prank(admin);
     grantTreasury.executeExpense(unapprovedExpenseId);
 
     vm.prank(admin);
     uint256 underfundedExpenseId = grantTreasury.proposeExpense(
       projectId,
-      payable(bob),
+      payable(admin),
       2 ether,
       "underfunded"
     );
@@ -150,17 +152,40 @@ contract ProtocolCoverageTest is ProtocolTest {
     grantTreasury.approveExpense(underfundedExpenseId);
 
     vm.expectRevert(InvalidAmount.selector);
-    vm.prank(carol);
+    vm.prank(admin);
     grantTreasury.executeExpense(underfundedExpenseId);
 
-    uint256 fundedProjectId = _createProjectAsAdmin();
+    // Unauthorized caller (neither proposer nor approver) must be blocked.
+    // Use a funded expense for the auth check so balance is not the revert reason:
+    // propose a small funded expense, approve it, then try from carol.
     vm.prank(alice);
-    grantTreasury.deposit{value: 2 ether}(fundedProjectId);
+    grantTreasury.deposit{value: 2 ether}(projectId);
+    vm.prank(admin);
+    uint256 authCheckExpenseId = grantTreasury.proposeExpense(
+      projectId,
+      payable(admin),
+      0.5 ether,
+      "auth check"
+    );
+    vm.prank(admin);
+    grantTreasury.approveExpense(authCheckExpenseId);
+    vm.expectRevert(abi.encodeWithSelector(UnauthorizedExpenseExecution.selector, authCheckExpenseId));
+    vm.prank(carol);
+    grantTreasury.executeExpense(authCheckExpenseId);
 
+    // Rejecting recipient that is also the project owner (owner-only rule):
+    // grant creator role to the contract, have it create its own project.
     RejectingRecipient rejectingRecipient = new RejectingRecipient();
     vm.prank(admin);
+    projectRegistry.grantRole(ProtocolRoles.PROJECT_CREATOR_ROLE, address(rejectingRecipient));
+    vm.prank(address(rejectingRecipient));
+    uint256 rejectingProjectId = projectRegistry.createProject("Rejecting", "ipfs://rejecting");
+    vm.prank(alice);
+    grantTreasury.deposit{value: 2 ether}(rejectingProjectId);
+
+    vm.prank(address(rejectingRecipient));
     uint256 failingExpenseId = grantTreasury.proposeExpense(
-      fundedProjectId,
+      rejectingProjectId,
       payable(address(rejectingRecipient)),
       1 ether,
       "failing"
@@ -169,7 +194,7 @@ contract ProtocolCoverageTest is ProtocolTest {
     grantTreasury.approveExpense(failingExpenseId);
 
     vm.expectRevert(abi.encodeWithSelector(ExpenseExecutionFailed.selector, failingExpenseId));
-    vm.prank(carol);
+    vm.prank(admin);
     grantTreasury.executeExpense(failingExpenseId);
   }
 

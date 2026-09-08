@@ -14,4 +14,7 @@ error MilestoneDoesNotExist(uint256 milestoneId);
 error MilestoneNotSubmitted(uint256 milestoneId);
 error MilestoneAlreadyApproved(uint256 milestoneId);
 error NotProjectOwner(uint256 projectId);
+error UnauthorizedExpenseExecution(uint256 expenseId);
+error InvalidExpenseRecipient(uint256 projectId);
+error MemoTooLong(uint256 maxLength);
 
