@@ -2,6 +2,7 @@
 
 import { PrivyProvider } from '@privy-io/react-auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from './auth/AuthProvider';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { WagmiProvider } from 'wagmi';
@@ -20,8 +21,6 @@ function getBlockchainConfigSafe() {
   try {
     return createBlockchainConfig();
   } catch {
-    // Fallback for static generation when env is missing — use placeholder RPCs.
-    // Uses only static chain definitions (no env reads), so this never throws.
     try {
       return createWagmiConfig({
         chains: [...supportedChains],
@@ -32,7 +31,6 @@ function getBlockchainConfigSafe() {
         },
       });
     } catch {
-      // Last resort: return dummy object cast — prevents build throw, runtime will still require real env
       return {} as ReturnType<typeof createBlockchainConfig>;
     }
   }
@@ -82,7 +80,9 @@ export default function Providers({ children }: ProvidersProps) {
   return (
     <PrivyProvider appId={configs.appId} config={configs.privyProviderConfig}>
       <WagmiProvider config={configs.blockchainConfig}>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryClientProvider>
       </WagmiProvider>
     </PrivyProvider>
   );

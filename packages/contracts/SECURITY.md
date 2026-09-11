@@ -1,6 +1,88 @@
-# SciAgent Contracts — Security (Phase 3)
+# SciAgent Contracts — Security
 
-## Scope
+## Phase 4: Authentication (Privy)
+
+### Scope
+
+`@sciagent/auth` package — Privy JWT verification, role-based access
+control (RBAC), Next.js middleware, Supabase RLS policy generation.
+Privy v1.32 via `@privy-io/server-auth`. No proxy:
+all contracts and auth logic are immutable (confirmed Phase 3/4).
+
+### Architecture
+
+```
+Privy client → Privy JWT (ES256) → @privy-io/server-auth verifyAuthToken
+→ Session + AuthUser → Supabase RLS (auth.uid()) → Contract calls
+```
+
+### Assumptions
+
+1. **Privy is the identity provider.** JWTs are signed by Privy's
+   verification key; `verifyAuthToken` validates ES256 signature,
+   issuer (`privy.io`), and audience (`appId`).
+2. **Roles stored in Privy custom metadata** under key `sciagent_role`.
+   Compromised metadata key = compromised roles.
+3. **Server-side verification only.** Private key (`PRIVY_APP_SECRET`)
+   never touches the browser; all JWT validation is server-side.
+4. **Supabase RLS enforces row-level security.** `auth.uid()` returns
+   the Privy JWT `sub` claim via `request.jwt.claim.sub`.
+5. **`auth.uid()` is a Supabase function** mapping the JWT sub/sid to
+   the authenticated user — RLS policies must use it consistently.
+
+### Trust boundaries
+
+| Boundary | Rule enforced |
+|---|---|
+| Privy JWT issuance | Privy signs; server verifies with SPKI + ES256 |
+| Session verification | `@privy-io/server-auth.verifyAuthToken` validates sig/iss/aud |
+| Role assignment | `customMetadata.sciagent_role`; resolved via `resolveRole()` |
+| Route protection | Next.js middleware + `createAuthMiddleware()` checks Bearer token |
+| Supabase RLS | `auth.uid()` = JWT `sub`; policies scoped to owner/admin |
+| API routes | Bearer token required for all `/api/*` except `/api/auth` and `/api/health` |
+
+### Fund-movement safety
+
+- `GrantTreasury.executeExpense` is called with the authenticated
+  user's wallet — role checks (proposer/approver) still enforced on-chain.
+- Privy auth gates **who can call**; Solidity access control gates
+  **what they can do**. Both layers must pass.
+- `auth.uid()` is derived from the Privy JWT `sub` claim — a forged
+  JWT would need the Privy private key.
+
+### Known limitations (accepted)
+
+1. **Privy is the single identity source.** Account compromise = full access.
+   Mitigation: Privy security controls + monitoring.
+2. **Role stored in custom metadata.** Metadata changes require Privy API.
+   A compromised metadata key grants role escalation.
+3. **`auth.uid()` relies on Supabase JWT parsing.** If Supabase changes
+   its JWT claim mapping, RLS policies break silently.
+4. **No on-chain session revocation.** If a session is compromised,
+   `invalidateSession` deletes the Privy user — but on-chain state
+   remains until next transaction.
+5. **Middleware protects API routes only.** Static pages and client-side
+   navigation are not protected; rely on client-side guards.
+6. **`PRIVY_APP_SECRET` is server-only but loaded at runtime.**
+   Rotation requires a deploy.
+
+### What an audit should focus on
+
+1. `@privy-io/server-auth` `verifyAuthToken` integration — SPKI loading,
+   issuer/audience validation, token expiry handling.
+2. Role assignment via Privy custom metadata — where/how is the role
+   set? Is it mutable by users?
+3. `auth.uid()` Supabase function — does it correctly map JWT `sub`
+   to the authenticated user across all tables?
+4. Next.js middleware — does it correctly extract and validate the
+   Bearer token for all protected routes?
+5. RLS policy coverage — are all user/financial tables covered by
+   policies? Any tables missing RLS?
+6. Key rotation procedure for `PRIVY_APP_SECRET`.
+
+---
+
+## Phase 3
 
 `ProjectRegistry`, `GrantTreasury`, `MilestoneRegistry`,
 `ReputationRegistry`, plus `ProtocolRoles`, `ProtocolErrors`,

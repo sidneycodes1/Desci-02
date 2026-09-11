@@ -7,7 +7,18 @@
   "pnpm": {
     "overrides": {
       "zod": "3.25.76"
-    }
+    },
+    "ignoredBuiltDependencies": [
+      "@reown/appkit",
+      "@sentry/cli",
+      "bufferutil",
+      "esbuild",
+      "keccak",
+      "msgpackr-extract",
+      "sharp",
+      "unrs-resolver",
+      "utf-8-validate"
+    ]
   },
   "engines": {
     "node": ">=20.18.0 <25"
@@ -21,9 +32,9 @@
     "prepare": "husky install"
   },
   "devDependencies": {
-    "@openzeppelin/contracts": "^5.0.2",
     "@commitlint/cli": "^17.6.7",
     "@commitlint/config-conventional": "^17.6.7",
+    "@openzeppelin/contracts": "^5.0.2",
     "@typescript-eslint/eslint-plugin": "^7.8.0",
     "@typescript-eslint/parser": "^7.8.0",
     "eslint": "^8.57.0",

@@ -1,0 +1,35 @@
+{
+  "name": "@sciagent/auth",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./role": "./src/role.ts",
+    "./session": "./src/session.ts",
+    "./server": "./src/server.ts",
+    "./middleware": "./src/middleware.ts",
+    "./routes": "./src/routes.ts",
+    "./rls": "./src/rls.ts",
+    "./types": "./src/types.ts",
+    "./errors": "./src/errors.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@privy-io/server-auth": "^1.32.5",
+    "@sciagent/shared": "workspace:*",
+    "@supabase/ssr": "^0.7.0",
+    "jose": "^5.10.0",
+    "svix": "^1.29.0",
+    "ts-case-convert": "^2.3.1"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.8",
+    "vitest": "^2.1.8"
+  }
+}

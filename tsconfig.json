@@ -22,7 +22,9 @@
       "@sciagent/contracts": ["packages/contracts/src/index.ts"],
       "@sciagent/contracts/*": ["packages/contracts/src/*"],
       "@sciagent/agents": ["packages/agents/src/index.ts"],
-      "@sciagent/agents/*": ["packages/agents/src/*"]
+      "@sciagent/agents/*": ["packages/agents/*"],
+      "@sciagent/auth": ["packages/auth/src/index.ts"],
+      "@sciagent/auth/*": ["packages/auth/src/*"]
     }
   },
   "include": ["packages", "apps", "next-env.d.ts"],
