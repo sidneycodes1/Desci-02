@@ -7,7 +7,7 @@ export interface AuthMiddlewareOptions {
 export function createAuthMiddleware(options: AuthMiddlewareOptions = {}) {
   return async function authMiddleware(
     request: Request,
-    context: { params: Record<string, string> }
+    _context: { params: Record<string, string> }
   ): Promise<Response | void> {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {

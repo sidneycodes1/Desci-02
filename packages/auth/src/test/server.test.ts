@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { invalidateSession } from '../session';
-import { PrivyClient } from '@privy-io/server-auth';
 
 const mockDeleteUser = vi.fn();
 

@@ -1,31 +1,20 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { verifySession, getSessionUser, invalidateSession } from '../session';
-import { PRIVY_AUDIENCE } from '../constants';
-import { PrivyClient } from '@privy-io/server-auth';
-import { getServerEnv } from '@sciagent/shared/env/server';
+import { verifySession, getSessionUser, invalidateSession as _invalidateSession } from '../session';
 
 const mockVerifyAuthToken = vi.fn();
 const mockGetUserFromIdToken = vi.fn();
-const mockDeleteUser = vi.fn();
 
 vi.mock('@privy-io/server-auth', () => ({
   PrivyClient: vi.fn(() => ({
     verifyAuthToken: mockVerifyAuthToken,
     getUserFromIdToken: mockGetUserFromIdToken,
-    deleteUser: mockDeleteUser,
   })),
 }));
 
 vi.mock('@sciagent/shared/env/server', () => ({
   getServerEnv: vi.fn(() => ({ PRIVY_APP_SECRET: 'test-secret' })),
 }));
-
-beforeEach(() => {
-  mockVerifyAuthToken.mockReset();
-  mockGetUserFromIdToken.mockReset();
-  mockDeleteUser.mockReset();
-});
 
 describe('Session verification', () => {
   it('verifySession throws without token', async () => {

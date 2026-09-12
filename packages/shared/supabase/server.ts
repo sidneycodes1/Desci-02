@@ -6,6 +6,33 @@ import { getServerEnv } from '../env/server';
 import type { SupabaseCookieAdapter } from './types';
 
 /**
+ * Create a Supabase client from a Privy JWT token.
+ * This sets the JWT in the global auth context so that auth.uid() in RLS policies
+ * resolves to the Privy user ID (the 'sub' claim in the JWT).
+ * 
+ * This is the correct way to use Supabase with Privy authentication in API routes.
+ * DO NOT use getSupabaseAdminClient() in user-facing routes — it bypasses RLS.
+ */
+export function createSupabaseClientFromToken(token: string): SupabaseClient {
+  const env = getServerEnv();
+  return createSupabaseJsClient(
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  );
+}
+
+/**
  * USER-SCOPED client (default for ALL user-triggered reads/writes).
  * Uses the publishable key + request cookies so Postgres RLS policies
  * scoped to `auth.uid()` are enforced. Phase 2 requires every query

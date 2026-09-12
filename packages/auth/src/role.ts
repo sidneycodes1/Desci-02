@@ -28,9 +28,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'milestone:create', 'milestone:approve',
     'reputation:write',
   ],
-  member: [
-    'expense:propose', 'milestone:create',
-  ],
+  member: [], // Collaborators/Members are read-only for treasury & milestone controls
   viewer: [],
 };
 

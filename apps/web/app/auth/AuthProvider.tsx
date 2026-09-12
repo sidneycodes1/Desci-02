@@ -16,8 +16,8 @@ const AuthContext = createContext<AuthContextValue>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { user: privyUser, ready } = usePrivy();
-  const [authState, setAuthState] = useState<AuthUser | null>(null);
+  const { ready } = usePrivy();
+  const [authState, _setAuthState] = useState<AuthUser | null>(null);
 
   const isLoading = !ready || authState === null;
 

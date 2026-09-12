@@ -56,7 +56,7 @@ const sql = generateRlsPolicies(['project_registries', 'grant_expenses', 'milest
 |------|-------|-------------|
 | admin | 4 | All permissions |
 | owner | 3 | Project, expense, milestone, reputation |
-| member | 2 | Propose expenses, create milestones |
+| member | 2 | Read-only for treasury & milestone controls |
 | viewer | 1 | Read-only |
 
 ## Environment Variables

@@ -21,6 +21,28 @@
   },
   "rules": {
     "@typescript-eslint/no-unused-vars": ["error", {"argsIgnorePattern": "^_", "varsIgnorePattern": "^_"}],
-    "react/react-in-jsx-scope": "off"
-  }
+    "react/react-in-jsx-scope": "off",
+    "next/link/href": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.ts", "**/*.tsx"],
+      "rules": {
+        "no-html-link-for-pages": "off"
+      }
+    },
+    {
+      "files": ["apps/web/app/api/**/*.ts", "apps/web/app/api/**/*.tsx"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "name": "@sciagent/shared/supabase/server",
+            "importNames": ["getSupabaseAdminClient"],
+            "message": "DO NOT use getSupabaseAdminClient in user-facing API routes - it bypasses RLS. Use createSupabaseClientFromToken(token) instead to pass the Privy JWT so auth.uid() resolves correctly in RLS policies."
+          }
+        ]
+      }
+    }
+  ]
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { Role, ROLE_PERMISSIONS, ROLE_HIERARCHY, hasRole, resolveRole, isHigherOrEqual } from '../role';
+import { ROLE_PERMISSIONS, ROLE_HIERARCHY, hasRole, resolveRole, isHigherOrEqual } from '../role';
 
 describe('Role hierarchy', () => {
   it('defines correct hierarchy', () => {
@@ -15,6 +15,12 @@ describe('Role hierarchy', () => {
 
   it('viewer has no permissions', () => {
     expect(ROLE_PERMISSIONS.viewer).toHaveLength(0);
+  });
+
+  it('member/collaborator role is read-only for money and milestones', () => {
+    expect(ROLE_PERMISSIONS.member).not.toContain('expense:propose');
+    expect(ROLE_PERMISSIONS.member).not.toContain('milestone:create');
+    expect(ROLE_PERMISSIONS.member).toHaveLength(0);
   });
 
   it('resolveRole maps strings correctly', () => {
