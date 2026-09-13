@@ -3,16 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
 import { verifySession } from '@sciagent/auth/session';
 import { updateProjectSchema } from '../../../../lib/validation/project';
-import { validateStatusTransition } from '../../../../lib/state-machine/project';
+import {
+  validateStatusTransition,
+  type ProjectStatus,
+} from '../../../../lib/state-machine/project';
 
 /**
  * GET /api/projects/[id] - Get a specific project
  * Requires authentication and access (owner or collaborator)
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const authHeader = request.headers.get('Authorization');
@@ -49,7 +49,17 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    return NextResponse.json({ project });
+    // Determine user role for this project
+    let userRole: 'admin' | 'owner' | 'member' | 'viewer' = 'viewer';
+    if (session.role === 'admin') {
+      userRole = 'admin';
+    } else if (isOwner) {
+      userRole = 'owner';
+    } else if (collaborator) {
+      userRole = 'member';
+    }
+
+    return NextResponse.json({ project, userRole });
   } catch (error) {
     console.error('GET /api/projects/[id] error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -60,10 +70,7 @@ export async function GET(
  * PATCH /api/projects/[id] - Update a project
  * Requires authentication and owner role
  */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const authHeader = request.headers.get('Authorization');
@@ -105,17 +112,25 @@ export async function PATCH(
     // Validate status transition if status is being changed
     if (validationResult.data.status && validationResult.data.status !== project.status) {
       try {
-        validateStatusTransition(project.status as any, validationResult.data.status as any);
+        validateStatusTransition(project.status as ProjectStatus, validationResult.data.status);
       } catch (error) {
         return NextResponse.json({ error: (error as Error).message }, { status: 400 });
       }
     }
 
-    const updateData: any = {};
+    const updateData: {
+      name?: string;
+      metadata_uri?: string;
+      status?: ProjectStatus;
+      updated_at: string;
+    } = {
+      updated_at: new Date().toISOString(),
+    };
     if (validationResult.data.name !== undefined) updateData.name = validationResult.data.name;
-    if (validationResult.data.metadataUri !== undefined) updateData.metadata_uri = validationResult.data.metadataUri;
-    if (validationResult.data.status !== undefined) updateData.status = validationResult.data.status;
-    updateData.updated_at = new Date().toISOString();
+    if (validationResult.data.metadataUri !== undefined)
+      updateData.metadata_uri = validationResult.data.metadataUri;
+    if (validationResult.data.status !== undefined)
+      updateData.status = validationResult.data.status;
 
     const { data: updatedProject, error } = await supabase
       .from('projects')

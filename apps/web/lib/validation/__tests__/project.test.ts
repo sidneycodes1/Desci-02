@@ -62,7 +62,7 @@ describe('Project validation schemas', () => {
       const result = createProjectSchema.safeParse({
         name: 'Test Project',
         metadataUri: 'https://example.com/metadata.json',
-        status: 'invalid' as any,
+        status: 'invalid',
       });
       expect(result.success).toBe(false);
     });
@@ -116,7 +116,7 @@ describe('Project validation schemas', () => {
     it('rejects invalid status', () => {
       const result = transitionProjectStatusSchema.safeParse({
         projectId: '123e4567-e89b-12d3-a456-426614174000',
-        newStatus: 'invalid' as any,
+        newStatus: 'invalid',
       });
       expect(result.success).toBe(false);
     });
@@ -147,7 +147,7 @@ describe('Project validation schemas', () => {
       const result = addCollaboratorSchema.safeParse({
         projectId: '123e4567-e89b-12d3-a456-426614174000',
         userId: '123e4567-e89b-12d3-a456-426614174001',
-        role: 'invalid' as any,
+        role: 'invalid',
       });
       expect(result.success).toBe(false);
     });

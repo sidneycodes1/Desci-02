@@ -34,6 +34,7 @@ describe('schema: tables exist', () => {
     'reputation_events',
     'reputation_scores',
     'ai_agent_runs',
+    'research_logs',
   ];
   for (const table of tables) {
     it(`has table ${table}`, async () => {
@@ -43,7 +44,7 @@ describe('schema: tables exist', () => {
 });
 
 describe('schema: RLS enabled everywhere', () => {
-  it('all 10 tables have rowsecurity on', async () => {
+  it('all 11 tables have rowsecurity on', async () => {
     const rows = await ctx.db.execute(sql`
       SELECT tablename FROM pg_tables
       WHERE schemaname = 'public' AND rowsecurity = true`);
@@ -58,6 +59,7 @@ describe('schema: RLS enabled everywhere', () => {
         'reputation_events',
         'reputation_scores',
         'treasury_balances',
+        'research_logs',
         'users',
         'wallets',
       ].sort()
@@ -85,6 +87,7 @@ describe('schema: RLS enabled everywhere', () => {
       'reputation_events',
       'reputation_scores',
       'ai_agent_runs',
+      'research_logs',
     ]) {
       expect(byTable.get(t) ?? 0, `policies on ${t}`).toBeGreaterThan(0);
     }

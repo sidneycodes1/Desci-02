@@ -60,12 +60,17 @@ export async function PUT(request: NextRequest) {
 
     const supabase = createSupabaseClientFromToken(token);
 
+    const { displayName, bio, orcidId, primaryWalletAddress } = validation.data;
+    const updates: Record<string, string | null> = {
+      display_name: displayName,
+      updated_at: new Date().toISOString(),
+    };
+    if (bio !== undefined) updates.bio = bio;
+    if (orcidId !== undefined) updates.orcid_id = orcidId === '' ? null : orcidId;
+
     const { data: updatedUser, error } = await supabase
       .from('users')
-      .update({
-        display_name: validation.data.displayName,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updates)
       .eq('id', session.userId)
       .select()
       .single();
@@ -73,6 +78,39 @@ export async function PUT(request: NextRequest) {
     if (error) {
       console.error('Error updating user settings:', error);
       return NextResponse.json({ error: 'Failed to update user settings' }, { status: 500 });
+    }
+
+    if (primaryWalletAddress !== undefined) {
+      const { data: wallet } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('address', primaryWalletAddress)
+        .single();
+
+      if (!wallet || wallet.user_id !== session.userId) {
+        return NextResponse.json({ error: 'Wallet not found for this user' }, { status: 404 });
+      }
+
+      const { error: walletError } = await supabase
+        .from('wallets')
+        .update({ is_primary: false })
+        .eq('user_id', session.userId);
+
+      if (walletError) {
+        console.error('Error clearing primary wallets:', walletError);
+        return NextResponse.json({ error: 'Failed to update wallet settings' }, { status: 500 });
+      }
+
+      const { error: primaryError } = await supabase
+        .from('wallets')
+        .update({ is_primary: true })
+        .eq('user_id', session.userId)
+        .eq('address', primaryWalletAddress);
+
+      if (primaryError) {
+        console.error('Error setting primary wallet:', primaryError);
+        return NextResponse.json({ error: 'Failed to update wallet settings' }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ settings: updatedUser });

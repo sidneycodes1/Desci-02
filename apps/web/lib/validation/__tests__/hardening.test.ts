@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { proposeExpenseSchema } from '../treasury';
 import { createResearchLogSchema } from '../researchLog';
-import { createMilestoneSchema, approveMilestoneSchema } from '../milestone';
+import { approveMilestoneSchema } from '../milestone';
 
 describe('Security & Money-Movement Hardening Tests', () => {
   describe('Treasury & Spend Request Guards', () => {

@@ -47,17 +47,22 @@ const auth = createAuthMiddleware({ requiredRole: 'owner' });
 ```ts
 import { generateRlsPolicies } from '@sciagent/auth/rls';
 
-const sql = generateRlsPolicies(['project_registries', 'grant_expenses', 'milestones', 'reputation_events']);
+const sql = generateRlsPolicies([
+  'project_registries',
+  'grant_expenses',
+  'milestones',
+  'reputation_events',
+]);
 ```
 
 ## Role Hierarchy
 
-| Role | Level | Permissions |
-|------|-------|-------------|
-| admin | 4 | All permissions |
-| owner | 3 | Project, expense, milestone, reputation |
-| member | 2 | Read-only for treasury & milestone controls |
-| viewer | 1 | Read-only |
+| Role   | Level | Permissions                                                                                                                                                                                                                                 |
+| ------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| admin  | 4     | All permissions including project:create, project:update, project:delete, expense:propose, expense:approve, expense:execute, milestone:create, milestone:approve, reputation:write, admin:manage_users, admin:manage_roles, admin:pause_all |
+| owner  | 3     | Project management (create/update/delete), expense management (propose/approve/execute), milestone management (create/approve), reputation:write                                                                                            |
+| member | 2     | Read-only access to projects. Cannot create projects, propose expenses, or create milestones. Treasury and milestone actions are owner/admin-only.                                                                                          |
+| viewer | 1     | Read-only access to projects                                                                                                                                                                                                                |
 
 ## Environment Variables
 

@@ -10,8 +10,9 @@ The `@sciagent/ui` package and Next.js frontend (`apps/web`) provide a modern, g
 
 All UI pages (`app/page.tsx` and `app/projects/[id]/page.tsx`) connect directly to backend API routes (`/api/projects/**`, `/api/notifications`, `/api/user/profile`) via **TanStack React Query** (`useQuery`, `useMutation`).
 
-- **Real Data Fetching**: Project overview, research log entries, milestone submissions, and treasury expense ledgers are retrieved live from database API endpoints.
+- **Real Data Fetching**: Project overview, research log entries, milestone submissions, and treasury expense ledgers are retrieved live from database API endpoints. No mock data fallbacks - all data comes from the real database.
 - **Mutations & Cache Invalidation**: Form submissions (project creation, log posting, milestone creation, expense proposals) dispatch real HTTP `POST` requests and automatically invalidate Query cache to update UI state from the database.
+- **Authentication**: All API calls send a Bearer session token via the centralized dev helper (`lib/dev-auth.ts`). This is still the `mock_session_token_dev` placeholder — see `KNOWN_LIMITATIONS.md` §3; it must be replaced with the real Privy `getAccessToken()` flow before production.
 
 ---
 

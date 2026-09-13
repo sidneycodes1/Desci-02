@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
 import { verifySession } from '@sciagent/auth/session';
 import { submitMilestoneProofSchema } from '../../../../../../../lib/validation/milestone';
-import { validateMilestoneTransition } from '@sciagent/shared/services/milestoneService';
+import {
+  validateMilestoneTransition,
+  type MilestoneState,
+} from '@sciagent/shared/services/milestoneService';
 
 /**
  * POST /api/projects/[id]/milestones/[milestoneId]/submit - Submit proof URI for a milestone
@@ -48,23 +51,25 @@ export async function POST(
     }
 
     // Validate transition state
-    const transitionCheck = validateMilestoneTransition(milestone.state as any, 'submitted');
+    const transitionCheck = validateMilestoneTransition(
+      milestone.state as MilestoneState,
+      'submitted'
+    );
     if (!transitionCheck.valid) {
       return NextResponse.json({ error: transitionCheck.error }, { status: 400 });
     }
 
     // Permission check: Creator or project owner
-    const { data: project } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { data: project } = await supabase.from('projects').select('*').eq('id', id).single();
 
     const isCreator = milestone.creator_user_id === session.userId;
     const isOwner = project?.owner_user_id === session.userId || session.role === 'admin';
 
     if (!isCreator && !isOwner) {
-      return NextResponse.json({ error: 'Access denied: Only milestone creator or project owner can submit proof' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Access denied: Only milestone creator or project owner can submit proof' },
+        { status: 403 }
+      );
     }
 
     // Update milestone state to submitted

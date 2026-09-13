@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { userSettingsSchema, projectSettingsSchema } from '../settings';
+import {
+  userSettingsSchema,
+  projectSettingsSchema,
+  notificationPreferencesSchema,
+} from '../settings';
 
 describe('Settings Validation Schemas', () => {
   describe('userSettingsSchema', () => {
@@ -38,6 +42,32 @@ describe('Settings Validation Schemas', () => {
         metadataUri: 'https://ipfs.io/ipfs/QmHash',
         status: 'invalid_status_enum',
       });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects paused status (no such state in DB enum or state machine)', () => {
+      const result = projectSettingsSchema.safeParse({
+        name: 'Project Title',
+        metadataUri: 'https://ipfs.io/ipfs/QmHash',
+        status: 'paused',
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('notificationPreferencesSchema', () => {
+    it('accepts a partial preferences update', () => {
+      const result = notificationPreferencesSchema.safeParse({ emailAlerts: true });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects non-boolean preference values', () => {
+      const result = notificationPreferencesSchema.safeParse({ emailAlerts: 'yes' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects an empty update', () => {
+      const result = notificationPreferencesSchema.safeParse({});
       expect(result.success).toBe(false);
     });
   });

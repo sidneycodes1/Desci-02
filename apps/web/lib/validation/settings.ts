@@ -17,8 +17,24 @@ export const userSettingsSchema = z.object({
 export const projectSettingsSchema = z.object({
   name: z.string().min(1, 'Project name is required').max(200),
   metadataUri: z.string().url('Metadata URI must be a valid URL'),
-  status: z.enum(['draft', 'active', 'paused', 'completed', 'archived']).optional(),
+  // Must stay in sync with the DB project_status enum + state machine
+  // (draft, active, completed, archived) — no 'paused' state exists.
+  status: z.enum(['draft', 'active', 'completed', 'archived']).optional(),
 });
+
+export const notificationPreferencesSchema = z
+  .object({
+    inAppAlerts: z.boolean(),
+    emailAlerts: z.boolean(),
+    milestoneAlerts: z.boolean(),
+    treasuryAlerts: z.boolean(),
+    researchLogAlerts: z.boolean(),
+  })
+  .partial()
+  .refine((p) => Object.keys(p).length > 0, {
+    message: 'At least one preference must be provided',
+  });
 
 export type UserSettingsInput = z.infer<typeof userSettingsSchema>;
 export type ProjectSettingsInput = z.infer<typeof projectSettingsSchema>;
+export type NotificationPreferencesInput = z.infer<typeof notificationPreferencesSchema>;

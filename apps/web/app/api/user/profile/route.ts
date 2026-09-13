@@ -59,11 +59,17 @@ export async function PUT(request: NextRequest) {
 
     const supabase = createSupabaseClientFromToken(token);
 
+    const { displayName, bio, orcidId } = validation.data;
+    const updates: Record<string, string | null> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (displayName !== undefined) updates.display_name = displayName;
+    if (bio !== undefined) updates.bio = bio;
+    if (orcidId !== undefined) updates.orcid_id = orcidId === '' ? null : orcidId;
+
     const { data: updatedUser, error } = await supabase
       .from('users')
-      .update({
-        updated_at: new Date().toISOString(),
-      })
+      .update(updates)
       .eq('id', session.userId)
       .select()
       .single();

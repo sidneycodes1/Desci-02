@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { devAuthHeaders } from '../lib/dev-auth';
 
 interface ProjectRecord {
   id: string;
@@ -19,15 +20,18 @@ export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [userRole, setUserRole] = useState<'admin' | 'owner' | 'member' | 'viewer'>('viewer');
 
   // Fetch real projects from API endpoint
-  const { data: projectsData, isLoading, isError } = useQuery<{ projects: ProjectRecord[] }>({
+  const {
+    data: projectsData,
+    isLoading,
+    isError,
+  } = useQuery<{ projects: ProjectRecord[]; userRole: 'admin' | 'owner' | 'member' | 'viewer' }>({
     queryKey: ['projects'],
     queryFn: async () => {
       const res = await fetch('/api/projects', {
-        headers: {
-          Authorization: `Bearer mock_session_token_dev`,
-        },
+        headers: devAuthHeaders(),
       });
       if (!res.ok) {
         throw new Error('Failed to fetch projects');
@@ -42,10 +46,7 @@ export default function HomePage() {
     mutationFn: async (payload: { name: string; metadataUri: string }) => {
       const res = await fetch('/api/projects', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer mock_session_token_dev`,
-        },
+        headers: devAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: payload.name,
           metadataUri: payload.metadataUri,
@@ -67,16 +68,13 @@ export default function HomePage() {
     },
   });
 
-  const projectsList = projectsData?.projects ?? [
-    {
-      id: 'p-alpha-01',
-      name: 'Quantum Decentralized Storage Verification',
-      metadata_uri: 'https://ipfs.io/ipfs/QmDescription',
-      status: 'active',
-      owner_user_id: '0x1234...5678',
-      created_at: new Date().toISOString(),
-    },
-  ];
+  React.useEffect(() => {
+    if (projectsData?.userRole) {
+      setUserRole(projectsData.userRole);
+    }
+  }, [projectsData]);
+
+  const projectsList = projectsData?.projects ?? [];
 
   const filteredProjects = projectsList.filter((p) => {
     if (filterState === 'all') return true;
@@ -106,15 +104,23 @@ export default function HomePage() {
             Decentralized Research <span className="text-gradient">Governance</span> & Treasury
           </h1>
           <p className="text-slate-400 text-base leading-relaxed">
-            Manage verifiable milestone payouts, AI-driven project risk analytics, and immutable research logs on Base.
+            Manage verifiable milestone payouts, AI-driven project risk analytics, and immutable
+            research logs on Base.
           </p>
           <div className="pt-2 flex items-center gap-4">
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/25 transition-all cursor-pointer"
-            >
-              + Create Research Project
-            </button>
+            {(userRole === 'owner' || userRole === 'admin') && (
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/25 transition-all cursor-pointer"
+              >
+                + Create Research Project
+              </button>
+            )}
+            {userRole === 'member' && (
+              <div className="text-xs text-slate-400">
+                Only owners and admins can create projects
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -123,7 +129,9 @@ export default function HomePage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight">Active Projects</h2>
-          <p className="text-xs text-slate-400">Explore decentralized research initiatives and milestones</p>
+          <p className="text-xs text-slate-400">
+            Explore decentralized research initiatives and milestones
+          </p>
         </div>
 
         <div className="flex items-center gap-2 bg-slate-900/80 p-1 rounded-lg border border-slate-800">
@@ -132,7 +140,9 @@ export default function HomePage() {
               key={st}
               onClick={() => setFilterState(st)}
               className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-colors cursor-pointer ${
-                filterState === st ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                filterState === st
+                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               {st}
@@ -145,6 +155,12 @@ export default function HomePage() {
       {isLoading && (
         <div className="p-8 text-center text-slate-400 font-mono text-xs">
           Loading projects from database API...
+        </div>
+      )}
+
+      {isError && (
+        <div className="p-8 text-center text-rose-400 font-mono text-xs">
+          Failed to load projects from the API. Please try again.
         </div>
       )}
 
@@ -163,8 +179,8 @@ export default function HomePage() {
                     p.status === 'active'
                       ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                       : p.status === 'draft' || p.status === 'created'
-                      ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30'
-                      : 'bg-slate-800 text-slate-400'
+                        ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30'
+                        : 'bg-slate-800 text-slate-400'
                   }`}
                 >
                   {p.status}
@@ -199,14 +215,19 @@ export default function HomePage() {
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <h3 className="text-lg font-bold text-white">Create Research Project</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-slate-400 hover:text-white"
+              >
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleCreateProject} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Project Name</label>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                  Project Name
+                </label>
                 <input
                   type="text"
                   required
@@ -218,7 +239,9 @@ export default function HomePage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Description URI</label>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                  Description URI
+                </label>
                 <textarea
                   required
                   rows={3}

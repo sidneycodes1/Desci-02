@@ -15,6 +15,27 @@
       "when": 1788856681133,
       "tag": "0001_rls_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789265502886,
+      "tag": "0002_blue_mulholland_black",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789265526126,
+      "tag": "0003_research_logs_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789266520427,
+      "tag": "0004_elite_orphan",
+      "breakpoints": true
     }
   ]
 }

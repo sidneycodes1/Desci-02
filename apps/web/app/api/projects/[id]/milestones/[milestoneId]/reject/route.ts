@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
 import { verifySession } from '@sciagent/auth/session';
 import { rejectMilestoneSchema } from '../../../../../../../lib/validation/milestone';
-import { validateMilestoneTransition } from '@sciagent/shared/services/milestoneService';
+import {
+  validateMilestoneTransition,
+  type MilestoneState,
+} from '@sciagent/shared/services/milestoneService';
 
 /**
  * POST /api/projects/[id]/milestones/[milestoneId]/reject - Reject milestone with reason
@@ -47,7 +50,10 @@ export async function POST(
     }
 
     if (project.owner_user_id !== session.userId && session.role !== 'admin') {
-      return NextResponse.json({ error: 'Access denied: Only project owner or admin can reject milestones' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Access denied: Only project owner or admin can reject milestones' },
+        { status: 403 }
+      );
     }
 
     // Get milestone entry
@@ -64,7 +70,10 @@ export async function POST(
     }
 
     // Validate transition
-    const transitionCheck = validateMilestoneTransition(milestone.state as any, 'rejected');
+    const transitionCheck = validateMilestoneTransition(
+      milestone.state as MilestoneState,
+      'rejected'
+    );
     if (!transitionCheck.valid) {
       return NextResponse.json({ error: transitionCheck.error }, { status: 400 });
     }

@@ -12,13 +12,14 @@ node_modules/
 .pnpm-store/
 .turbo/
 coverage/
-packages/shared/coverage/
 *.tsbuildinfo
 **/*.tsbuildinfo
 lcov.info
-.next/
 packages/contracts/out/
 packages/contracts/cache/
 packages/contracts/broadcast/
 packages/contracts/lcov.info
 packages/database/.local-pglite/
+# Local-only editor/AI-assistant configs (example scaffolds, not project code)
+.continue/
+.agents/

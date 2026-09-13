@@ -2,15 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
 import { verifySession } from '@sciagent/auth/session';
 import { projectSettingsSchema } from '../../../../../lib/validation/settings';
-import { canTransitionStatus } from '../../../../../lib/state-machine/project';
+import { canTransitionStatus, type ProjectStatus } from '../../../../../lib/state-machine/project';
 
 /**
  * GET /api/projects/[id]/settings - Get project settings
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const authHeader = request.headers.get('Authorization');
@@ -36,7 +33,10 @@ export async function GET(
 
     const isOwner = project.owner_user_id === session.userId;
     if (!isOwner && session.role !== 'admin') {
-      return NextResponse.json({ error: 'Access denied: Only owner or admin can view project settings' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Access denied: Only owner or admin can view project settings' },
+        { status: 403 }
+      );
     }
 
     return NextResponse.json({ settings: project });
@@ -49,10 +49,7 @@ export async function GET(
 /**
  * PUT /api/projects/[id]/settings - Update project settings & state transition
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const authHeader = request.headers.get('Authorization');
@@ -88,14 +85,19 @@ export async function PUT(
     }
 
     if (project.owner_user_id !== session.userId && session.role !== 'admin') {
-      return NextResponse.json({ error: 'Access denied: Only owner or admin can update project settings' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Access denied: Only owner or admin can update project settings' },
+        { status: 403 }
+      );
     }
 
     // State transition check if status is updated
     if (validation.data.status && validation.data.status !== project.status) {
-      if (!canTransitionStatus(project.status as any, validation.data.status as any)) {
+      if (!canTransitionStatus(project.status as ProjectStatus, validation.data.status)) {
         return NextResponse.json(
-          { error: `Invalid status transition from ${project.status} to ${validation.data.status}` },
+          {
+            error: `Invalid status transition from ${project.status} to ${validation.data.status}`,
+          },
           { status: 400 }
         );
       }

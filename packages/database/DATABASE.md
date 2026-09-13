@@ -23,6 +23,7 @@ for system jobs only (seed, reconciliation, AI workers).
 | `wallets`               | Extra wallets per user (`address` unique)                                                                                                     | hard (cascade)      |
 | `projects`              | Research projects; `status` draft/active/completed/archived; `metadata_uri` mirrors registry                                                  | soft (`deleted_at`) |
 | `project_collaborators` | (project, user) membership, PK composite                                                                                                      | hard (membership)   |
+| `research_logs`         | Progress entries per project with optional IPFS evidence (`evidence_cid/mime/size`); Phase 6                                                  | soft (`deleted_at`) |
 | `milestones`            | Mirrors `MilestoneRegistry` states created/submitted/approved                                                                                 | soft                |
 | `treasury_balances`     | Cached on-chain balance per project (chain is truth; Phase 7 reconciles)                                                                      | never               |
 | `expenses`              | Spend requests; `memo varchar(1024)` = `MAX_MEMO_LENGTH`; recipient must equal project owner (contract rule, enforced app-side — cross-table) | never (audit trail) |
@@ -34,7 +35,7 @@ Indexes on all FKs + `(owner,status)`, `(project,status/state)`,
 `(agent,status)`. DB checks: `points <> 0`, `amount_wei > 0`, memo length
 (varchar), enum types, uniques, FKs.
 
-## RLS (all 10 tables, `auth.uid()`)
+## RLS (all 11 tables, `auth.uid()`)
 
 - Members (owner or collaborator) read their project scope; drafts are
   private, active/completed/archived readable by any authenticated user.
@@ -43,8 +44,8 @@ Indexes on all FKs + `(owner,status)`, `(project,status/state)`,
   (trigger `users_no_role_escalation`, 42501).
 - `treasury_balances` / `reputation_scores` / `ai_agent_runs`: no
   authenticated writes at all (service_role jobs only).
-- `reputation_events` inserts: project owner as oracle delegate until the
-  Phase 4 role model lands.
+- `reputation_events` inserts: project owner as oracle delegate (see Phase 4
+  role model in `AUTH.md`).
 - Mutual project/collaborator policy references use `SECURITY DEFINER`
   `plpgsql` helpers (`is_project_owner/member/visible`) — plain-SQL
   helpers inline and recurse (42P17); the role trigger is invoker on
@@ -55,6 +56,12 @@ Indexes on all FKs + `(owner,status)`, `(project,status/state)`,
 - `migrations/0000_*` — Drizzle-generated tables/enums/indexes.
 - `migrations/0001_rls_policies.sql` — hand-written checks, grants,
   helpers, policies (`drizzle-kit generate --custom` journal entry).
+- `migrations/0002_blue_mulholland_black.sql` — Drizzle-generated
+  `research_logs` table DDL.
+- `migrations/0003_research_logs_rls.sql` — hand-written grants + RLS
+  policies for `research_logs`.
+- `migrations/0004_elite_orphan.sql` — Drizzle-generated `users.bio` /
+  `users.orcid_id` columns (profile enrichment).
 - Apply on Supabase via `drizzle-kit migrate` with `DATABASE_URL`, or SQL
   in the Supabase SQL editor (create `authenticated` role first on fresh
   projects — it exists by default on Supabase).
@@ -63,8 +70,8 @@ Indexes on all FKs + `(owner,status)`, `(project,status/state)`,
 
 - `pnpm --filter @sciagent/database db:seed` — migrates + seeds PGlite
   file DB at `packages/database/.local-pglite` (gitignored).
-- `pnpm --filter @sciagent/database test` — 35 tests on throwaway PGlite:
-  18 schema (tables, RLS-enabled, constraints, seed relations) + 17 RLS
+- `pnpm --filter @sciagent/database test` — 36 tests on throwaway PGlite:
+  19 schema (tables, RLS-enabled, constraints, seed relations) + 17 RLS
   behavioral (outsider/collaborator/owner matrix, oracle/admin-only
   writes). Test shim provides `auth.uid()` + roles before migrations.
 

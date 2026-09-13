@@ -18,12 +18,14 @@ Phase 6 implements research log and progress update entries tied to research pro
 ## Evidence Upload & Storage Rules
 
 ### Allowed File Types
+
 - `application/pdf` (Research papers, reports)
 - `image/png`, `image/jpeg` (Spectra, charts, lab photos)
 - `application/json` (Raw data, experimental parameters)
 - `text/plain`, `text/markdown` (Code snippets, notes)
 
 ### File Constraints
+
 - **Max File Size**: 10 MB (10,485,760 bytes)
 - **Title Length**: 1 - 200 characters
 - **Content Length**: 1 - 50,000 characters
@@ -31,12 +33,15 @@ Phase 6 implements research log and progress update entries tied to research pro
 ## API Routes
 
 ### GET `/api/projects/[id]/logs`
+
 List all active research logs for a project in reverse chronological order.
 
 ### POST `/api/projects/[id]/logs`
+
 Create a new research log for a project.
 
 **Payload:**
+
 ```json
 {
   "title": "Synthesis Results for Compound A-42",
@@ -48,13 +53,15 @@ Create a new research log for a project.
 ```
 
 ### GET `/api/projects/[id]/logs/[logId]`
+
 Fetch details of a single research log entry.
 
 ### DELETE `/api/projects/[id]/logs/[logId]`
+
 Soft delete a research log entry (`deleted_at` set).
 
 ## Security & Database Scoping
 
-- **Supabase RLS**: Enabled on `research_logs` table (`0002_research_logs.sql`).
+- **Supabase RLS**: Enabled on `research_logs` table (DDL in `0002_blue_mulholland_black.sql`, policies in `0003_research_logs_rls.sql`).
 - **User Scoping**: User authorization enforced using `createSupabaseClientFromToken()` with the user's JWT session.
 - **Data Retention**: Soft-delete preserves audit trails for grant compliance.

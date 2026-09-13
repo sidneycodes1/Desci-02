@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
 import { verifySession } from '@sciagent/auth/session';
-import { createProjectSchema, updateProjectSchema } from '../../../lib/validation/project';
-import { validateStatusTransition } from '../../../lib/state-machine/project';
+import { createProjectSchema } from '../../../lib/validation/project';
 
 /**
  * GET /api/projects - List projects for authenticated user
@@ -47,10 +46,12 @@ export async function GET(request: NextRequest) {
 
     const allProjects = [
       ...(ownerProjects || []),
-      ...(collaboratorProjects?.map((cp: any) => cp.projects).filter(Boolean) || []),
+      ...((collaboratorProjects ?? []) as Array<{ projects: unknown }>)
+        .map((cp) => cp.projects)
+        .filter(Boolean),
     ];
 
-    return NextResponse.json({ projects: allProjects });
+    return NextResponse.json({ projects: allProjects, userRole: session.role });
   } catch (error) {
     console.error('GET /api/projects error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

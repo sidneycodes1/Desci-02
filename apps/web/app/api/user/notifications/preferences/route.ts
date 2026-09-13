@@ -4,6 +4,7 @@ import {
   getUserNotificationPreferences,
   updateUserNotificationPreferences,
 } from '@sciagent/shared/services/notificationService';
+import { notificationPreferencesSchema } from '../../../../../lib/validation/settings';
 
 /**
  * GET /api/user/notifications/preferences - Fetch user notification settings
@@ -40,7 +41,16 @@ export async function PUT(request: NextRequest) {
     const session = await verifySession(token);
 
     const body = await request.json();
-    const updatedPreferences = updateUserNotificationPreferences(session.userId, body);
+    const validation = notificationPreferencesSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: validation.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const updatedPreferences = updateUserNotificationPreferences(session.userId, validation.data);
 
     return NextResponse.json({ preferences: updatedPreferences });
   } catch (error) {

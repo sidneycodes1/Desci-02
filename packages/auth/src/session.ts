@@ -85,10 +85,7 @@ export async function verifySession(
   };
 }
 
-export async function getSessionUser(
-  token: string,
-  privyClient?: PrivyClient
-): Promise<AuthUser> {
+export async function getSessionUser(token: string, privyClient?: PrivyClient): Promise<AuthUser> {
   const session = await verifySession(token, privyClient);
   const client = privyClient ?? new PrivyClient(PRIVY_AUDIENCE, getServerEnv().PRIVY_APP_SECRET);
   const user = await client.getUserFromIdToken(token);
@@ -108,10 +105,38 @@ export async function getSessionUser(
   };
 }
 
-export async function invalidateSession(
-  userId: string,
-  privyClient?: PrivyClient
-): Promise<void> {
+export async function invalidateSession(userId: string, privyClient?: PrivyClient): Promise<void> {
   const client = privyClient ?? new PrivyClient(PRIVY_AUDIENCE, getServerEnv().PRIVY_APP_SECRET);
   await client.deleteUser(userId);
+}
+
+/**
+ * Test-only session verification for integration testing.
+ * Only usable when NODE_ENV=test or TEST_MODE=true.
+ * Returns a structurally valid fake session for testing API routes.
+ */
+export async function verifySessionTest(
+  token: string,
+  options?: { userId?: string; role?: Role }
+): Promise<PrivySession> {
+  if (process.env.NODE_ENV !== 'test' && process.env.TEST_MODE !== 'true') {
+    throw new Error('verifySessionTest is only available in test mode');
+  }
+
+  // Parse token as "test_user_id" or use provided userId
+  const userId = options?.userId || (token.startsWith('test_') ? token : 'test-user-id');
+  const role = options?.role || 'owner';
+
+  return {
+    userId,
+    sessionId: 'test-session-id',
+    appId: PRIVY_AUDIENCE || 'test-app-id',
+    issuer: 'test-issuer',
+    issuedAt: Date.now(),
+    expiration: Date.now() + 3600000, // 1 hour from now
+    role,
+    permissions: ROLE_PERMISSIONS[role],
+    linkedAccounts: [],
+    customMetadata: { [ROLE_TO_PRIVY_METADATA_KEY]: role },
+  };
 }

@@ -15,6 +15,8 @@ export const users = pgTable(
     id: uuid('id').primaryKey().$defaultFn(uuidDefault),
     walletAddress: text('wallet_address').unique(),
     displayName: text('display_name'),
+    bio: text('bio'),
+    orcidId: text('orcid_id'),
     role: userRoleEnum('role').notNull().default('researcher'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

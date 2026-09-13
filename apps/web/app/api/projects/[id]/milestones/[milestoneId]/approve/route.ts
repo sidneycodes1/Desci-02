@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
 import { verifySession } from '@sciagent/auth/session';
 import { approveMilestoneSchema } from '../../../../../../../lib/validation/milestone';
-import { processMilestoneApproval } from '@sciagent/shared/services/milestoneService';
+import {
+  processMilestoneApproval,
+  type MilestoneState,
+} from '@sciagent/shared/services/milestoneService';
 
 /**
  * POST /api/projects/[id]/milestones/[milestoneId]/approve - Approve milestone & trigger treasury fund release
@@ -65,9 +68,10 @@ export async function POST(
 
     // Get owner wallet address
     const ownerWallets = project.users?.wallets;
-    const ownerWalletAddress = Array.isArray(ownerWallets) && ownerWallets.length > 0
-      ? ownerWallets[0].address
-      : '0x0000000000000000000000000000000000000000';
+    const ownerWalletAddress =
+      Array.isArray(ownerWallets) && ownerWallets.length > 0
+        ? ownerWallets[0].address
+        : '0x0000000000000000000000000000000000000000';
 
     // Get current treasury balance for budget check
     const { data: treasuryBalance } = await supabase
@@ -86,7 +90,7 @@ export async function POST(
         title: milestone.title,
         descriptionUri: milestone.description_uri,
         proofUri: milestone.proof_uri,
-        state: milestone.state as any,
+        state: milestone.state as MilestoneState,
         creatorUserId: milestone.creator_user_id,
       },
       reviewerRole,

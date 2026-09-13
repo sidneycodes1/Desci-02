@@ -1,4 +1,7 @@
--- Custom SQL migration file for Phase 6: Research Logs
+-- Custom SQL migration for Phase 6: Research Logs RLS.
+-- Table DDL lives in 0002 (drizzle-kit generated); this file holds the
+-- authenticated-role grants + RLS policies, mirroring the 0000/0001 split.
+-- (Content recovered verbatim from the previously unregistered 0002_research_logs.sql.)
 GRANT SELECT, INSERT, UPDATE, DELETE ON "research_logs" TO authenticated;
 --> statement-breakpoint
 

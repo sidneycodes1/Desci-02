@@ -2,16 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
 import { verifySession } from '@sciagent/auth/session';
-import { addCollaboratorSchema, removeCollaboratorSchema } from '../../../../../lib/validation/project';
+import { addCollaboratorSchema } from '../../../../../lib/validation/project';
 
 /**
  * GET /api/projects/[id]/collaborators - List project collaborators
  * Requires authentication and project access
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const authHeader = request.headers.get('Authorization');
@@ -70,10 +67,7 @@ export async function GET(
  * POST /api/projects/[id]/collaborators - Add a collaborator
  * Requires authentication and owner role
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const authHeader = request.headers.get('Authorization');
@@ -115,11 +109,7 @@ export async function POST(
     }
 
     // Check if user exists
-    const { data: user } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    const { data: user } = await supabase.from('users').select('*').eq('id', userId).single();
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });

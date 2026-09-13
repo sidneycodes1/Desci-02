@@ -35,7 +35,13 @@ completed → archived (archiving completed projects)
 ### State Machine Functions
 
 ```typescript
-import { canTransitionStatus, validateStatusTransition, isTerminalStatus, isActiveProject, isEditableProject } from './lib/state-machine/project';
+import {
+  canTransitionStatus,
+  validateStatusTransition,
+  isTerminalStatus,
+  isActiveProject,
+  isEditableProject,
+} from './lib/state-machine/project';
 
 // Check if transition is valid
 if (canTransitionStatus('draft', 'active')) {
@@ -58,6 +64,7 @@ isEditableProject('draft'); // true
 Create a new project. Requires authentication and minimum `owner` role.
 
 **Request:**
+
 ```json
 {
   "name": "Research Project Name",
@@ -85,6 +92,7 @@ Get a specific project. Requires authentication and project access (owner or col
 Update a project. Requires authentication and owner role (or admin). Status transitions are validated against the state machine.
 
 **Request:**
+
 ```json
 {
   "name": "Updated Name",
@@ -112,6 +120,7 @@ List project collaborators. Requires authentication and project access.
 Add a collaborator to a project. Requires authentication and owner role (or admin).
 
 **Request:**
+
 ```json
 {
   "userId": "user-uuid",
@@ -158,6 +167,7 @@ All input is validated using Zod schemas:
 ### Access Control
 
 All API routes:
+
 1. Require valid Bearer token in Authorization header
 2. Verify session using Privy JWT
 3. Check role requirements for the operation
@@ -189,6 +199,7 @@ Collaborators are stored in `project_collaborators` with composite primary key o
 - State machine: 18 tests covering all valid/invalid transitions and helper functions
 
 Run tests:
+
 ```bash
 pnpm --filter sciagent-web test
 ```
@@ -197,7 +208,9 @@ pnpm --filter sciagent-web test
 
 - Validation: ✅ All schemas tested
 - State machine: ✅ All transitions tested
-- API routes: ⚠️ Integration tests deferred due to workspace package module resolution issues in vitest
+- API routes: ✅ Route-level persistence integration tests in
+  `apps/web/lib/__tests__/api-integration.test.ts` (real route handlers
+  against PGlite with a test-only auth double, verifying writes persist)
 
 ## Security Considerations
 
@@ -211,10 +224,9 @@ pnpm --filter sciagent-web test
 
 ## Known Limitations
 
-1. API route integration tests are deferred due to vitest module resolution issues with workspace packages. These should be added as integration tests using a test database.
-2. Collaborator role permissions are not yet enforced at the API level (only owner/admin can modify projects). Future phases should add granular collaborator permissions.
-3. No rate limiting on API routes yet.
-4. Project metadata is stored as a URI reference; metadata content validation is not implemented.
+1. Collaborator role permissions are not yet enforced at the API level (only owner/admin can modify projects). Future phases should add granular collaborator permissions.
+2. No rate limiting on API routes yet.
+3. Project metadata is stored as a URI reference; metadata content validation is not implemented.
 
 ## Next Steps
 
