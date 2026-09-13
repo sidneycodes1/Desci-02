@@ -20,7 +20,7 @@ Privy (client) → Privy JWT → @sciagent/auth → Supabase RLS → Contract ca
 ## Installation
 
 ```bash
-pnpm add @sciagent/auth --filter @sciagent/web
+pnpm --filter sciagent-web add @sciagent/auth
 ```
 
 ## Usage
@@ -28,7 +28,7 @@ pnpm add @sciagent/auth --filter @sciagent/web
 ### Server-side session verification
 
 ```ts
-import { verifySession, getSessionUser } from '@sciagent/auth/server';
+import { verifySession, getSessionUser } from '@sciagent/auth/session';
 
 const session = await verifySession(request.headers.get('Authorization')!.slice(7));
 const user = await getSessionUser(token);
@@ -44,15 +44,16 @@ const auth = createAuthMiddleware({ requiredRole: 'owner' });
 
 ### RLS Policies
 
+The canonical row-level security policies live in
+`packages/database/migrations/0001_rls_policies.sql` (plus
+`0003_research_logs_rls.sql`) and are enforced on all 11 tables via the
+user-scoped Supabase client. The `generateRlsPolicies` helper below is a
+legacy template for drafting policies, not the enforced source of truth:
+
 ```ts
 import { generateRlsPolicies } from '@sciagent/auth/rls';
 
-const sql = generateRlsPolicies([
-  'project_registries',
-  'grant_expenses',
-  'milestones',
-  'reputation_events',
-]);
+const sql = generateRlsPolicies(['projects', 'expenses', 'milestones', 'reputation_events']);
 ```
 
 ## Role Hierarchy
@@ -74,7 +75,7 @@ const sql = generateRlsPolicies([
 ## Tests
 
 ```bash
-pnpm test --filter @sciagent/auth
+pnpm --filter @sciagent/auth test
 ```
 
 ## Security

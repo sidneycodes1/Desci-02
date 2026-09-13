@@ -1,7 +1,9 @@
 # SciAgent Database (Phase 2)
 
-Drizzle ORM + Supabase Postgres. Runtime user queries go through the
-Supabase scoped client (`createSupabaseServerClient`); Drizzle owns
+Drizzle ORM + Supabase Postgres. Runtime user queries go through a
+user-scoped Supabase client (`createSupabaseClientFromToken(token)` in API
+routes, `createSupabaseServerClient(cookieAdapter)` where cookie auth is
+used) so `auth.uid()` RLS policies apply; Drizzle owns
 schema/migrations/seed/worker scripts. The service-role admin client is
 for system jobs only (seed, reconciliation, AI workers).
 

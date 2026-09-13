@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import React from 'react';
 import { Button, Badge, Card } from '../src';
 
 describe('@sciagent/ui Components', () => {

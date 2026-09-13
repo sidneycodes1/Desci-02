@@ -8,15 +8,14 @@
     ".": "./src/index.ts",
     "./role": "./src/role.ts",
     "./session": "./src/session.ts",
-    "./server": "./src/server.ts",
     "./middleware": "./src/middleware.ts",
     "./routes": "./src/routes.ts",
     "./rls": "./src/rls.ts",
-    "./types": "./src/types.ts",
     "./errors": "./src/errors.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint . --ext .ts,.tsx",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

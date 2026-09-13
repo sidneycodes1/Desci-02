@@ -6,6 +6,7 @@ import {
   runOrchestration,
   agentTaskQueue,
 } from '../src';
+import type { TrackerInput, TrackerOutput } from '../src';
 
 describe('SciAgent AI Agents Suite', () => {
   describe('Tracker Agent', () => {
@@ -138,7 +139,7 @@ describe('SciAgent AI Agents Suite', () => {
   describe('Agent Task Queue System', () => {
     it('enqueues and processes tasks with registered worker handler', async () => {
       agentTaskQueue.registerHandler('tracker', async (task) => {
-        return analyzeProjectActivity(task.payload);
+        return analyzeProjectActivity(task.payload as TrackerInput);
       });
 
       const task = await agentTaskQueue.enqueue({
@@ -160,7 +161,9 @@ describe('SciAgent AI Agents Suite', () => {
 
       const processedTask = await agentTaskQueue.getTask(task.id);
       expect(processedTask?.status).toBe('completed');
-      expect(processedTask?.result?.activityScore).toBeGreaterThan(0);
+      expect((processedTask?.result as TrackerOutput | undefined)?.activityScore).toBeGreaterThan(
+        0
+      );
     });
   });
 });

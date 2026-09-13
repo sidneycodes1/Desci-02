@@ -30,12 +30,12 @@ A milestone progresses through four strict states:
 
 ## Role & Permission Rules
 
-| Action | Allowed Roles |
-|---|---|
-| Create Milestone | Project Owner, Admin |
-| Submit Proof | Milestone Creator, Project Owner, Admin |
-| Approve Milestone | Project Owner, Admin |
-| Reject Milestone | Project Owner, Admin |
+| Action            | Allowed Roles                           |
+| ----------------- | --------------------------------------- |
+| Create Milestone  | Project Owner, Admin                    |
+| Submit Proof      | Milestone Creator, Project Owner, Admin |
+| Approve Milestone | Project Owner, Admin                    |
+| Reject Milestone  | Project Owner, Admin                    |
 
 ---
 
@@ -45,7 +45,7 @@ When approving a milestone, the approver can specify an optional `releaseAmountW
 
 1. **Budget Check**: The system validates that `releaseAmountWei <= currentOnchainBalanceWei` of the project treasury. If the release amount exceeds available funds, the approval fails with code `INSUFFICIENT_TREASURY_FUNDS`.
 2. **Expense Record**: Upon successful approval, the protocol automatically generates an approved expense record assigned to the project owner's wallet address.
-3. **On-chain Disbursement**: Integrates with `@sciagent/contracts` `Treasury.sol` / `SpendingLimits.sol` for automated contract execution.
+3. **On-chain Disbursement**: Integrates with the `@sciagent/contracts` `GrantTreasury` expense lifecycle (`proposeExpense` / `approveExpense` / `executeExpense`) for contract execution.
 
 ---
 

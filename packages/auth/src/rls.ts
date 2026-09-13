@@ -1,7 +1,15 @@
-export function generateUserRlsPolicy(
-  tableName: string,
-  userIdColumn: string = 'user_id'
-): string {
+/**
+ * LEGACY policy-template helper.
+ *
+ * The enforced row-level security policies live in
+ * `packages/database/migrations/0001_rls_policies.sql` (plus
+ * `0003_research_logs_rls.sql`) and are tested against PGlite in
+ * `packages/database/test/rls.test.ts`. This module only drafts generic
+ * template SQL (it references illustrative table names, not the real
+ * schema) and is NOT the source of truth — do not deploy its output.
+ * Kept for backwards compatibility and covered by `src/test/rls.test.ts`.
+ */
+export function generateUserRlsPolicy(tableName: string, userIdColumn: string = 'user_id'): string {
   return `
 CREATE POLICY "SciAgent ${tableName} access" ON ${tableName}
   USING (
@@ -34,9 +42,7 @@ CREATE POLICY "SciAgent ${tableName} access" ON ${tableName}
 }
 
 export function generateRlsPolicies(tables: string[]): string {
-  return tables
-    .map((table) => generateUserRlsPolicy(table))
-    .join('\n');
+  return tables.map((table) => generateUserRlsPolicy(table)).join('\n');
 }
 
 export const RLS_SQL = `

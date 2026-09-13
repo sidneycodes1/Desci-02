@@ -7,8 +7,10 @@ all `/api/*` route handlers.
 ## Role in the system
 
 - **Pages:** `app/page.tsx` (projects overview), `app/projects/[id]/page.tsx`
-  (workspace with 5 tabs). Data comes live from the API via TanStack Query —
-  no mock fallbacks.
+  (workspace with 5 tabs). Projects, logs, milestones, treasury balance, and
+  expenses come live from the API via TanStack Query. Exception: the AI
+  health-score badges are still hardcoded placeholders — see
+  `KNOWN_LIMITATIONS.md` §4.
 - **API:** `app/api/projects/**`, `app/api/notifications`, `app/api/user/*`.
   Every route verifies the Privy Bearer JWT (`@sciagent/auth/session`) and
   queries Postgres through the **user-scoped** Supabase client

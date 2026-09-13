@@ -32,6 +32,15 @@
 
 ---
 
+## 4. Dashboard AI Health Scores (Display Only)
+
+- **Current State**: The AI Health Index badges on the project workspace (`apps/web/app/projects/[id]/page.tsx` — overall 88/100, tracker 92, spending 85, milestone 87) are hardcoded display values.
+- **Limitation**: They do not reflect live `@sciagent/agents` orchestrator output for the project being viewed.
+- **Production Requirement**: Wire the overview tab to real orchestrator results (new API endpoint running `runOrchestration` on live project data, or a cached score from `ai_agent_runs`).
+- **Impact**: Dashboard health badges are illustrative only; treasury balance, logs, milestones, and expenses shown alongside them are real.
+
+---
+
 ## Deployment Checklist
 
 Before deploying to production, ensure all items above are addressed:
@@ -39,5 +48,6 @@ Before deploying to production, ensure all items above are addressed:
 - [ ] Notifications migrated to PostgreSQL with RLS policies
 - [ ] AI agent queue migrated to Redis/BullMQ
 - [ ] Real Privy JWT authentication implemented
+- [ ] Dashboard health scores wired to live orchestrator output
 - [ ] All hardcoded development tokens removed
 - [ ] End-to-end testing with real authentication flow

@@ -1,8 +1,9 @@
 # SciAgent Protocol — Deployment & Launch Checklist
 
-> Pre-read: [KNOWN_LIMITATIONS.md](./KNOWN_LIMITATIONS.md). The three items
+> Pre-read: [KNOWN_LIMITATIONS.md](./KNOWN_LIMITATIONS.md). The items
 > tracked there (in-memory notifications, in-memory agent queue, dev session
-> token) MUST be resolved before any production launch.
+> token, hardcoded dashboard health scores) MUST be resolved before any
+> production launch.
 
 ## Environment Variables Configuration
 

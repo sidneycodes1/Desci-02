@@ -24,7 +24,12 @@ export interface ProcessApprovalParams {
 export interface ApprovalResult {
   success: boolean;
   error?: string;
-  code?: 'UNAUTHORIZED' | 'NOT_SUBMITTED' | 'ALREADY_APPROVED' | 'INSUFFICIENT_TREASURY_FUNDS' | 'INVALID_TRANSITION';
+  code?:
+    | 'UNAUTHORIZED'
+    | 'NOT_SUBMITTED'
+    | 'ALREADY_APPROVED'
+    | 'INSUFFICIENT_TREASURY_FUNDS'
+    | 'INVALID_TRANSITION';
   fundReleaseTriggered: boolean;
   releasePayload?: {
     recipientAddress: string;
@@ -45,7 +50,10 @@ export function validateMilestoneTransition(
   targetState: MilestoneState
 ): { valid: boolean; error?: string } {
   if (currentState === 'approved') {
-    return { valid: false, error: 'Cannot modify or transition an approved milestone (terminal state)' };
+    return {
+      valid: false,
+      error: 'Cannot modify or transition an approved milestone (terminal state)',
+    };
   }
 
   if (targetState === 'submitted') {
@@ -69,21 +77,31 @@ export function validateMilestoneTransition(
     return { valid: true };
   }
 
-  return { valid: false, error: `Invalid milestone transition from '${currentState}' to '${targetState}'` };
+  return {
+    valid: false,
+    error: `Invalid milestone transition from '${currentState}' to '${targetState}'`,
+  };
 }
 
 /**
  * Processes milestone approval and generates on-chain treasury fund release trigger.
  */
 export function processMilestoneApproval(params: ProcessApprovalParams): ApprovalResult {
-  const { milestone, reviewerRole, reviewerUserId, projectOwnerWallet, releaseAmountWei, currentOnchainBalanceWei } = params;
+  const {
+    milestone,
+    reviewerRole,
+    projectOwnerWallet,
+    releaseAmountWei,
+    currentOnchainBalanceWei,
+  } = params;
 
   // 1. Role Check: Approver must be admin or project owner/reviewer
   if (reviewerRole !== 'admin' && reviewerRole !== 'owner') {
     return {
       success: false,
       code: 'UNAUTHORIZED',
-      error: 'Only project owners or system admins can approve milestones and trigger fund releases',
+      error:
+        'Only project owners or system admins can approve milestones and trigger fund releases',
       fundReleaseTriggered: false,
     };
   }

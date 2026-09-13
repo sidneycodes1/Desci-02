@@ -37,6 +37,19 @@ interface ExpenseRecord {
 
 type WorkspaceTab = 'overview' | 'logs' | 'treasury' | 'milestones' | 'export';
 
+/** Format a wei string as ETH with 4 decimals. Returns '—' when unavailable. */
+function formatWeiToEth(wei?: string | null): string {
+  if (!wei) return '—';
+  try {
+    const weiBig = BigInt(wei);
+    const whole = weiBig / 10n ** 18n;
+    const frac = (weiBig % 10n ** 18n).toString().padStart(18, '0').slice(0, 4);
+    return `${whole.toString()}.${frac} ETH`;
+  } catch {
+    return '—';
+  }
+}
+
 export default function ProjectWorkspacePage({ params }: { params: Promise<{ id: string }> }) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('overview');
@@ -81,6 +94,9 @@ export default function ProjectWorkspacePage({ params }: { params: Promise<{ id:
   const [newExpenseAmountWei, setNewExpenseAmountWei] = useState('');
   const [newExpenseMemo, setNewExpenseMemo] = useState('');
 
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
   // 1. Fetch Research Logs
   const { data: logsData } = useQuery<{ logs: ResearchLogRecord[] }>({
     queryKey: ['logs', projectId],
@@ -118,6 +134,22 @@ export default function ProjectWorkspacePage({ params }: { params: Promise<{ id:
         headers: devAuthHeaders(),
       });
       if (!res.ok) return { expenses: [] };
+      return res.json();
+    },
+    enabled: !!projectId,
+  });
+
+  // 4. Fetch Treasury Balance (cached on-chain balance + sync metadata)
+  const { data: treasuryData, isLoading: isTreasuryLoading } = useQuery<{
+    balance: { onchain_balance_wei?: string; onchainBalanceWei?: string };
+  }>({
+    queryKey: ['treasury', projectId],
+    queryFn: async () => {
+      if (!projectId) return { balance: {} };
+      const res = await fetch(`/api/projects/${projectId}/treasury`, {
+        headers: devAuthHeaders(),
+      });
+      if (!res.ok) return { balance: {} };
       return res.json();
     },
     enabled: !!projectId,
@@ -203,6 +235,38 @@ export default function ProjectWorkspacePage({ params }: { params: Promise<{ id:
       amountWei: newExpenseAmountWei,
       memo: newExpenseMemo,
     });
+  };
+
+  // Authenticated export download: anchor tags cannot attach the Bearer
+  // token the API middleware requires, so fetch with headers and save the
+  // blob client-side instead.
+  const handleExport = async (format: 'csv' | 'json') => {
+    if (!projectId || isExporting) return;
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/export?format=${format}&section=all`, {
+        headers: devAuthHeaders(),
+      });
+      if (!res.ok) throw new Error('Export request failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      if (format === 'json') {
+        window.open(url, '_blank', 'noreferrer');
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `project-${projectId}-ledger.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch {
+      setExportError('Export failed. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -352,7 +416,14 @@ export default function ProjectWorkspacePage({ params }: { params: Promise<{ id:
                 <span className="text-xs text-slate-400 uppercase font-mono">
                   On-Chain Grant Treasury
                 </span>
-                <div className="text-2xl font-bold text-white font-mono">10.00 ETH</div>
+                <div className="text-2xl font-bold text-white font-mono">
+                  {isTreasuryLoading
+                    ? 'Loading…'
+                    : formatWeiToEth(
+                        treasuryData?.balance?.onchain_balance_wei ??
+                          treasuryData?.balance?.onchainBalanceWei
+                      )}
+                </div>
               </div>
             </div>
 
@@ -512,22 +583,24 @@ export default function ProjectWorkspacePage({ params }: { params: Promise<{ id:
             </p>
 
             <div className="flex items-center gap-4 pt-2">
-              <a
-                href={`/api/projects/${projectId}/export?format=csv&section=all`}
-                download
-                className="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-lg shadow-lg shadow-cyan-500/20 cursor-pointer inline-flex items-center gap-2"
+              <button
+                type="button"
+                onClick={() => handleExport('csv')}
+                disabled={isExporting || !projectId}
+                className="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-lg shadow-lg shadow-cyan-500/20 cursor-pointer inline-flex items-center gap-2 disabled:opacity-50"
               >
-                📥 Download CSV Ledger
-              </a>
-              <a
-                href={`/api/projects/${projectId}/export?format=json&section=all`}
-                target="_blank"
-                rel="noreferrer"
-                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 font-semibold text-xs rounded-lg cursor-pointer inline-flex items-center gap-2"
+                {isExporting ? '⏳ Preparing…' : '📥 Download CSV Ledger'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport('json')}
+                disabled={isExporting || !projectId}
+                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 font-semibold text-xs rounded-lg cursor-pointer inline-flex items-center gap-2 disabled:opacity-50"
               >
                 🔍 View JSON Report
-              </a>
+              </button>
             </div>
+            {exportError && <p className="text-xs text-rose-400">{exportError}</p>}
           </div>
         )}
       </div>

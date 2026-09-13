@@ -224,10 +224,6 @@ pnpm --filter sciagent-web test
 
 ## Known Limitations
 
-1. Collaborator role permissions are not yet enforced at the API level (only owner/admin can modify projects). Future phases should add granular collaborator permissions.
+1. Collaborator (member) permissions are intentionally read-only for treasury and milestone actions — only the project owner or an admin can propose expenses, manage collaborators, or change project status. See `AUTH.md` (role matrix) and `packages/auth/src/role.ts` (`member: []`).
 2. No rate limiting on API routes yet.
 3. Project metadata is stored as a URI reference; metadata content validation is not implemented.
-
-## Next Steps
-
-Phase 6 will implement research logs (progress updates, evidence uploads) tied to projects.

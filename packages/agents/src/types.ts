@@ -2,14 +2,14 @@ export type AgentType = 'tracker' | 'spending' | 'milestone' | 'orchestrator';
 
 export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
-export interface AgentTask<T = any> {
+export interface AgentTask<T = unknown> {
   id: string;
   type: AgentType;
   projectId: string;
   payload: T;
   createdAt: string;
   status: TaskStatus;
-  result?: any;
+  result?: unknown;
   error?: string;
 }
 

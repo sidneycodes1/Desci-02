@@ -1,16 +1,18 @@
-import { AgentTask, TaskStatus } from './types';
+import { AgentTask } from './types';
 
-type TaskHandler<T = any, R = any> = (task: AgentTask<T>) => Promise<R>;
+type TaskHandler<T = unknown, R = unknown> = (task: AgentTask<T>) => Promise<R>;
 
 class TaskQueue {
-  private tasks: Map<string, AgentTask> = new Map();
-  private handlers: Map<string, TaskHandler> = new Map();
+  private tasks: Map<string, AgentTask<unknown>> = new Map();
+  private handlers: Map<string, TaskHandler<unknown, unknown>> = new Map();
 
-  registerHandler(taskType: string, handler: TaskHandler): void {
-    this.handlers.set(taskType, handler);
+  registerHandler<T, R>(taskType: string, handler: TaskHandler<T, R>): void {
+    this.handlers.set(taskType, handler as TaskHandler<unknown, unknown>);
   }
 
-  async enqueue<T = any>(task: Omit<AgentTask<T>, 'id' | 'createdAt' | 'status'>): Promise<AgentTask<T>> {
+  async enqueue<T = unknown>(
+    task: Omit<AgentTask<T>, 'id' | 'createdAt' | 'status'>
+  ): Promise<AgentTask<T>> {
     const id = `task-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const fullTask: AgentTask<T> = {
       ...task,
@@ -27,11 +29,11 @@ class TaskQueue {
     return fullTask;
   }
 
-  async getTask(id: string): Promise<AgentTask | undefined> {
+  async getTask(id: string): Promise<AgentTask<unknown> | undefined> {
     return this.tasks.get(id);
   }
 
-  async listTasks(): Promise<AgentTask[]> {
+  async listTasks(): Promise<AgentTask<unknown>[]> {
     return Array.from(this.tasks.values());
   }
 
@@ -51,9 +53,9 @@ class TaskQueue {
       const result = await handler(task);
       task.status = 'completed';
       task.result = result;
-    } catch (err: any) {
+    } catch (err: unknown) {
       task.status = 'failed';
-      task.error = err?.message ?? 'Unknown task processing error';
+      task.error = err instanceof Error ? err.message : 'Unknown task processing error';
     }
   }
 }

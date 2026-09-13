@@ -7,8 +7,9 @@ contracts.
 
 > **Status:** MVP in active development, pre-production. See
 > [KNOWN_LIMITATIONS.md](./KNOWN_LIMITATIONS.md) before deploying anywhere —
-> notifications and the agent queue are in-memory, and the frontend still uses
-> a dev session token (`apps/web/lib/dev-auth.ts`).
+> notifications and the agent queue are in-memory, the frontend still uses
+> a dev session token (`apps/web/lib/dev-auth.ts`), and the dashboard AI
+> health badges are hardcoded placeholders.
 
 ## Architecture
 

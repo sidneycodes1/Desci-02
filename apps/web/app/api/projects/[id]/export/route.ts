@@ -11,10 +11,7 @@ import {
 /**
  * GET /api/projects/[id]/export?format=csv|json&section=all|logs|expenses|milestones
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const authHeader = request.headers.get('Authorization');
@@ -126,9 +123,9 @@ export async function GET(
         exportedAt: new Date().toISOString(),
         project: {
           id: project.id,
-          title: project.title,
-          description: project.description,
-          state: project.state,
+          name: project.name,
+          metadataUri: project.metadata_uri,
+          status: project.status,
           ownerUserId: project.owner_user_id,
           createdAt: project.created_at,
         },

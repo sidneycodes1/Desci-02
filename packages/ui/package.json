@@ -9,6 +9,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint . --ext .ts,.tsx",
     "test": "vitest run"
   },
   "dependencies": {

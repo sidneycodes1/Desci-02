@@ -2,11 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   createNotification,
   listUserNotifications,
-  markNotificationAsRead,
   getUserNotificationPreferences,
   updateUserNotificationPreferences,
   notifyResearchLogCreated,
-  notifyMilestoneSubmitted,
   notifyMilestoneApproved,
 } from '../services/notificationService';
 
