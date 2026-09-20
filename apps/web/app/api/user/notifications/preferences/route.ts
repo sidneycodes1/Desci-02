@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifySession } from '@sciagent/auth/session';
+import { requireAppSession } from '../../../../../lib/app-session';
 import {
   getUserNotificationPreferences,
   updateUserNotificationPreferences,
@@ -11,15 +11,11 @@ import { notificationPreferencesSchema } from '../../../../../lib/validation/set
  */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
 
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
-
-    const preferences = getUserNotificationPreferences(session.userId);
+    const preferences = getUserNotificationPreferences(session.appUserId);
     return NextResponse.json({ preferences });
   } catch (error) {
     console.error('GET /api/user/notifications/preferences error:', error);
@@ -32,13 +28,9 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
 
     const body = await request.json();
     const validation = notificationPreferencesSchema.safeParse(body);
@@ -50,7 +42,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const updatedPreferences = updateUserNotificationPreferences(session.userId, validation.data);
+    const updatedPreferences = updateUserNotificationPreferences(session.appUserId, validation.data);
 
     return NextResponse.json({ preferences: updatedPreferences });
   } catch (error) {

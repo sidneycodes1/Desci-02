@@ -1,8 +1,6 @@
-import { createAuthMiddleware } from '@sciagent/auth/middleware';
+import { verifySession } from '@sciagent/auth/session';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-
-const authMiddleware = createAuthMiddleware({ requiredRole: 'viewer' });
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -13,12 +11,17 @@ export async function middleware(request: NextRequest) {
 
   if (pathname.startsWith('/api/')) {
     const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7).trim()
+      : null;
+
+    if (!token || token === 'null' || token === 'undefined' || token === '') {
       return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
     }
 
+    // Authentication only: the token must verify as a real Privy session.
     try {
-      await authMiddleware(request, { params: {} });
+      await verifySession(token);
     } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

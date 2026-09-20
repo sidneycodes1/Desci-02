@@ -14,6 +14,7 @@ export const users = pgTable(
   {
     id: uuid('id').primaryKey().$defaultFn(uuidDefault),
     walletAddress: text('wallet_address').unique(),
+    handle: text('handle').unique(),
     displayName: text('display_name'),
     bio: text('bio'),
     orcidId: text('orcid_id'),
@@ -21,7 +22,7 @@ export const users = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('users_wallet_address_idx').on(t.walletAddress)]
+  (t) => [index('users_wallet_address_idx').on(t.walletAddress), index('users_handle_idx').on(t.handle)]
 );
 
 export const wallets = pgTable(

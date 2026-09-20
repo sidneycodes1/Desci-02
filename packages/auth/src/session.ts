@@ -85,6 +85,52 @@ export async function verifySession(
   };
 }
 
+export interface AppIdentity {
+  /** Raw Privy user id (`did:privy:...`) — NOT a database uuid. */
+  userId: string;
+  sessionId: string;
+  appId: string;
+  role: Role;
+  permissions: Permission[];
+  /** Primary wallet address, if the Privy user has one linked. */
+  walletAddress: string | null;
+  linkedAccounts: LinkAccount[];
+}
+
+/**
+ * Verify a Privy access token and extract the app-level identity in a single
+ * Privy round trip (verify + user fetch). Unlike `verifySession` callers that
+ * feed `userId` straight into uuid-typed DB columns, consumers MUST resolve
+ * `userId` (a `did:privy:...` DID) to the internal `users.id` uuid first —
+ * comparing a uuid column to a DID string fails in Postgres (22P02), and
+ * Supabase PostgREST rejects Privy-signed JWTs outright (PGRST301), so the
+ * raw token must never be forwarded as the Supabase Bearer.
+ */
+export async function getAppIdentity(
+  token: string,
+  privyClient?: PrivyClient
+): Promise<AppIdentity> {
+  const client = privyClient ?? new PrivyClient(PRIVY_AUDIENCE, getServerEnv().PRIVY_APP_SECRET);
+  const result = await client.verifyAuthToken(token);
+  const user = await client.getUserFromIdToken(token);
+  const role = resolveRole(user.customMetadata?.[ROLE_TO_PRIVY_METADATA_KEY] as string);
+  const linked = (user.linkedAccounts ?? []) as unknown as LinkAccount[];
+  const walletAddress =
+    user.wallet?.address ??
+    (linked.find((a) => a.type === 'wallet' && typeof a.address === 'string')?.address as
+      | string
+      | undefined) ??
+    null;
+  return {
+    userId: result.userId,
+    sessionId: result.sessionId,
+    appId: result.appId,
+    role,
+    permissions: ROLE_PERMISSIONS[role],
+    walletAddress,
+    linkedAccounts: linked,
+  };
+}
 export async function getSessionUser(token: string, privyClient?: PrivyClient): Promise<AuthUser> {
   const session = await verifySession(token, privyClient);
   const client = privyClient ?? new PrivyClient(PRIVY_AUDIENCE, getServerEnv().PRIVY_APP_SECRET);

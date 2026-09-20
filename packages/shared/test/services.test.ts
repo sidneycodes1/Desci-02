@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createServiceRegistry } from '../services';
+import { createServiceRegistry } from '../src/services';
 
 describe('service registry', () => {
   it('throws when a required service is missing', () => {

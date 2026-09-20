@@ -23,6 +23,10 @@ process.env.TEST_MODE = 'true';
 
 const TEST_USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const TEST_TOKEN = `test_${TEST_USER_ID}`;
+// Simulates a real Privy access token: opaque to the app, carrying a
+// `did:privy:...` identity that is NOT a uuid and must be bridged.
+const DID_TOKEN = 'did:privy:testwalletuser001';
+const TEST_DID_WALLET = '0x3333333333333333333333333333333333333333';
 
 // ---------------------------------------------------------------------------
 // Test doubles (injected deps — prod code untouched, unreachable outside test)
@@ -57,6 +61,48 @@ vi.mock('@sciagent/auth/session', () => ({
       customMetadata: { sciagent_role: 'owner' },
     };
   },
+  // Double for the production identity bridge: uuid tokens resolve directly
+  // (as above); `did:privy:...` tokens resolve via linked wallet, exactly
+  // like a real Privy session hitting requireAppSession.
+  getAppIdentity: async (token: string) => {
+    if (process.env.NODE_ENV !== 'test' && process.env.TEST_MODE !== 'true') {
+      throw new Error('test double only available in test mode');
+    }
+    if (!token || typeof token !== 'string' || token.length === 0) {
+      throw new Error('Missing token');
+    }
+    if (token === 'invalid-token') {
+      throw new Error('Invalid token');
+    }
+    if (token.startsWith('did:privy:')) {
+      return {
+        userId: token,
+        sessionId: 'test-session-id',
+        appId: 'test-app-id',
+        role: 'owner',
+        permissions: ['project:create', 'project:read', 'log:create', 'milestone:create'],
+        walletAddress: TEST_DID_WALLET,
+        linkedAccounts: [{ type: 'wallet', address: TEST_DID_WALLET }],
+      };
+    }
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let userId = TEST_USER_ID;
+    if (token.startsWith('test_')) {
+      const maybe = token.slice('test_'.length);
+      if (uuidRe.test(maybe)) userId = maybe;
+    } else if (uuidRe.test(token)) {
+      userId = token;
+    }
+    return {
+      userId,
+      sessionId: 'test-session-id',
+      appId: 'test-app-id',
+      role: 'owner',
+      permissions: ['project:create', 'project:read', 'log:create', 'milestone:create'],
+      walletAddress: null,
+      linkedAccounts: [],
+    };
+  },
 }));
 
 vi.mock('@sciagent/shared/supabase/server', () => {
@@ -80,6 +126,7 @@ vi.mock('@sciagent/shared/supabase/server', () => {
     private insertRows: Array<Record<string, unknown>> | null = null;
     private updatePatch: Record<string, unknown> | null = null;
     private wantSingle = false;
+    private wantMaybeSingle = false;
 
     constructor(pg: any, table: string) {
       this.pg = pg;
@@ -118,6 +165,13 @@ vi.mock('@sciagent/shared/supabase/server', () => {
 
     single(): this {
       this.wantSingle = true;
+      return this;
+    }
+
+    // Mirrors supabase-js maybeSingle: zero rows -> { data: null, error: null }
+    // (used by treasury balance reads; absent rows are valid, not errors).
+    maybeSingle(): this {
+      this.wantMaybeSingle = true;
       return this;
     }
 
@@ -218,6 +272,9 @@ vi.mock('@sciagent/shared/supabase/server', () => {
         sql += ` ORDER BY ${cleanOrders.map((o) => `${qid(o.col)} ${o.asc ? 'ASC' : 'DESC'}`).join(', ')}`;
       }
       const res = await this.pg.query(sql, params);
+      if (this.wantMaybeSingle) {
+        return { data: res.rows[0] ?? null, error: null };
+      }
       if (this.wantSingle) {
         if (res.rows.length === 0) {
           return { data: null, error: { code: 'PGRST116', message: 'no rows' } };
@@ -230,6 +287,17 @@ vi.mock('@sciagent/shared/supabase/server', () => {
 
   return {
     createSupabaseClientFromToken: (_token: string) => {
+      const pg = (globalThis as any).__TEST_PG__;
+      if (!pg) {
+        throw new Error('PGlite test DB not initialized (globalThis.__TEST_PG__ missing)');
+      }
+      return {
+        from: (table: string) => new Builder(pg, table),
+      };
+    },
+    // Production routes reach the DB through requireAppSession, which uses
+    // the service-role client (Privy JWTs are not Supabase JWTs). Same shim.
+    getSupabaseAdminClient: () => {
       const pg = (globalThis as any).__TEST_PG__;
       if (!pg) {
         throw new Error('PGlite test DB not initialized (globalThis.__TEST_PG__ missing)');
@@ -264,6 +332,7 @@ import {
   GET as getProjectSettings,
   PUT as updateProjectSettings,
 } from '../../app/api/projects/[id]/settings/route';
+import { GET as exportReport } from '../../app/api/projects/[id]/export/route';
 
 let pg: PGlite;
 
@@ -616,5 +685,200 @@ describe('Phase 12/13 repairs via REAL route handlers (PGlite, no live creds)', 
     expect(badRes.status).toBe(400);
     const after = await pg.query(`SELECT "status" FROM "projects" WHERE "id" = $1`, [projectId]);
     expect((after.rows[0] as any).status).toBe('active');
+  });
+});
+
+describe('Privy DID identity bridge (real browser bug, Sep 2026)', () => {
+  it('fresh Privy DID login: GET /api/projects returns 200 with [] and provisions the user row', async () => {
+    const getRes = await listProjects(authedGetRequest('http://localhost/api/projects', DID_TOKEN));
+    expect(getRes.status).toBe(200);
+    const json = await getRes.json();
+    expect(json.projects).toEqual([]);
+
+    const userRows = await pg.query(
+      `SELECT "id", "wallet_address" FROM "users" WHERE "wallet_address" = $1`,
+      [TEST_DID_WALLET]
+    );
+    expect(userRows.rows).toHaveLength(1);
+
+    const walletRows = await pg.query(
+      `SELECT "user_id", "address", "is_primary" FROM "wallets" WHERE "address" = $1`,
+      [TEST_DID_WALLET]
+    );
+    expect(walletRows.rows).toHaveLength(1);
+    expect((walletRows.rows[0] as any).user_id).toBe((userRows.rows[0] as any).id);
+    expect((walletRows.rows[0] as any).is_primary).toBe(true);
+
+    // Second call reuses the provisioned row — no duplicates.
+    const retryRes = await listProjects(
+      authedGetRequest('http://localhost/api/projects', DID_TOKEN)
+    );
+    expect(retryRes.status).toBe(200);
+    const countRows = await pg.query(
+      `SELECT COUNT(*)::int AS n FROM "users" WHERE "wallet_address" = $1`,
+      [TEST_DID_WALLET]
+    );
+    expect((countRows.rows[0] as any).n).toBe(1);
+  });
+
+  it('second authenticated route works for the DID user: GET /api/user/profile returns the provisioned profile', async () => {
+    const getRes = await getProfile(authedGetRequest('http://localhost/api/user/profile', DID_TOKEN));
+    expect(getRes.status).toBe(200);
+    const profile = (await getRes.json()).profile;
+    // NOTE: the PGlite shim returns base rows only (no PostgREST joins), so
+    // this asserts identity linkage, not the embedded wallets array.
+    expect(profile.wallet_address).toBe(TEST_DID_WALLET);
+    const userRows = await pg.query(`SELECT "id" FROM "users" WHERE "wallet_address" = $1`, [
+      TEST_DID_WALLET,
+    ]);
+    expect(profile.id).toBe((userRows.rows[0] as any).id);
+  });
+
+  it('DID user can create a project end to end (owner FK resolves to the provisioned uuid)', async () => {
+    const name = `DID Project ${Date.now()}`;
+    const postRes = await createProject(
+      authedJsonRequest(
+        'http://localhost/api/projects',
+        'POST',
+        { name, metadataUri: 'https://example.com/did-meta.json', status: 'draft' },
+        DID_TOKEN
+      )
+    );
+    expect(postRes.status).toBe(201);
+    const projectId: string = (await postRes.json()).project.id;
+
+    const userRows = await pg.query(`SELECT "id" FROM "users" WHERE "wallet_address" = $1`, [
+      TEST_DID_WALLET,
+    ]);
+    const direct = await pg.query(`SELECT "owner_user_id" FROM "projects" WHERE "id" = $1`, [
+      projectId,
+    ]);
+    expect((direct.rows[0] as any).owner_user_id).toBe((userRows.rows[0] as any).id);
+
+    const getRes = await listProjects(authedGetRequest('http://localhost/api/projects', DID_TOKEN));
+    expect(getRes.status).toBe(200);
+    expect((await getRes.json()).projects.map((p: { id: string }) => p.id)).toContain(projectId);
+  });
+
+  it('unverifiable token fails closed with 401, never 500', async () => {
+    const res = await listProjects(authedGetRequest('http://localhost/api/projects', 'invalid-token'));
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toBe('Invalid or expired session');
+  });
+});
+
+describe('Project export (audit transparency)', () => {
+  // Expenses are seeded by direct SQL: POST /api/projects/[id]/expenses
+  // enforces INSUFFICIENT_FUNDS against the (empty) treasury cache, so a
+  // funded-ledger fixture can only be built beneath the route layer.
+  async function seedExportFixture() {
+    const projectRes = await createProject(
+      authedJsonRequest('http://localhost/api/projects', 'POST', {
+        name: `Export Parent ${Date.now()}`,
+        metadataUri: 'https://example.com/export-parent.json',
+        status: 'active',
+      })
+    );
+    expect(projectRes.status).toBe(201);
+    const projectId: string = (await projectRes.json()).project.id;
+
+    await pg.query(
+      `INSERT INTO "research_logs" ("id", "project_id", "author_user_id", "title", "content") VALUES ($1, $2, $3, $4, $5)`,
+      [crypto.randomUUID(), projectId, TEST_USER_ID, 'Exported Finding', 'Content for export.']
+    );
+    await pg.query(
+      `INSERT INTO "milestones" ("id", "project_id", "creator_user_id", "title", "description_uri", "state") VALUES ($1, $2, $3, $4, $5, 'approved')`,
+      [crypto.randomUUID(), projectId, TEST_USER_ID, 'Exported Milestone', 'https://example.com/ms.json']
+    );
+    const expenseRows = [
+      { memo: 'Approved payout', amount: '100', status: 'approved' },
+      { memo: 'Executed payout', amount: '200', status: 'executed' },
+      { memo: 'Draft idea', amount: '999', status: 'proposed' },
+    ];
+    for (const e of expenseRows) {
+      await pg.query(
+        `INSERT INTO "expenses" ("id", "project_id", "proposer_user_id", "recipient_address", "amount_wei", "memo", "status") VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          crypto.randomUUID(),
+          projectId,
+          TEST_USER_ID,
+          '0x1111111111111111111111111111111111111111',
+          e.amount,
+          e.memo,
+          e.status,
+        ]
+      );
+    }
+    return projectId;
+  }
+
+  it('JSON section=all returns the full ledger with committed-spend totals (was: empty expenses, total 0)', async () => {
+    const projectId = await seedExportFixture();
+    const res = await exportReport(
+      authedGetRequest(`http://localhost/api/projects/${projectId}/export?format=json&section=all`),
+      paramsFor(projectId)
+    );
+    expect(res.status).toBe(200);
+    const report = (await res.json()).report;
+
+    // The regression: expenses filtered on a nonexistent deleted_at column
+    // came back empty with totalExpensesWei '0'. Real data must show.
+    expect(report.expenses).toHaveLength(3);
+    expect(report.treasury.expenseCount).toBe(3);
+    expect(report.treasury.totalExpensesWei).toBe('300');
+    expect(report.logs).toHaveLength(1);
+    expect(report.milestones).toHaveLength(1);
+  });
+
+  it('JSON section filtering omits unrequested datasets instead of emptying them', async () => {
+    const projectId = await seedExportFixture();
+    const res = await exportReport(
+      authedGetRequest(`http://localhost/api/projects/${projectId}/export?format=json&section=logs`),
+      paramsFor(projectId)
+    );
+    expect(res.status).toBe(200);
+    const report = (await res.json()).report;
+    expect(report.logs).toHaveLength(1);
+    expect('expenses' in report).toBe(false);
+    expect('milestones' in report).toBe(false);
+    expect('treasury' in report).toBe(false);
+  });
+
+  it('CSV sections contain their rows (was: expenses section always empty)', async () => {
+    const projectId = await seedExportFixture();
+
+    const expensesCsv = await (
+      await exportReport(
+        authedGetRequest(
+          `http://localhost/api/projects/${projectId}/export?format=csv&section=expenses`
+        ),
+        paramsFor(projectId)
+      )
+    ).text();
+    expect(expensesCsv).toContain('Expense ID,Recipient Address,Amount (wei),Memo,Status,Created At');
+    expect(expensesCsv).toContain('"Approved payout"');
+    expect(expensesCsv).toContain('"Executed payout"');
+
+    const milestonesCsv = await (
+      await exportReport(
+        authedGetRequest(
+          `http://localhost/api/projects/${projectId}/export?format=csv&section=milestones`
+        ),
+        paramsFor(projectId)
+      )
+    ).text();
+    expect(milestonesCsv).toContain('Milestone ID,Title,State,Proof URI,Created At');
+    expect(milestonesCsv).toContain('"Exported Milestone"');
+
+    const allCsv = await (
+      await exportReport(
+        authedGetRequest(`http://localhost/api/projects/${projectId}/export?format=csv&section=all`),
+        paramsFor(projectId)
+      )
+    ).text();
+    expect(allCsv).toContain('=== RESEARCH LOGS ===');
+    expect(allCsv).toContain('=== EXPENSES LEDGER ===');
+    expect(allCsv).toContain('=== MILESTONES ===');
+    expect(allCsv).toContain('"Exported Finding"');
   });
 });

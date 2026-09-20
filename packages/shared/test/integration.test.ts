@@ -6,7 +6,7 @@ import {
   exportExpensesToCSV,
   notifyMilestoneApproved,
   listUserNotifications,
-} from '../services';
+} from '../src/services';
 
 describe('Cross-Module End-to-End Integration Suite', () => {
   it('executes end-to-end lifecycle across treasury, milestone, reports, and notifications', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { baseMainnetChain, baseSepoliaChain } from '../blockchain/chains';
-import { isSupportedChainId, shortenAddress } from '../blockchain/utils';
+import { baseMainnetChain, baseSepoliaChain } from '../src/blockchain/chains';
+import { isSupportedChainId, shortenAddress } from '../src/blockchain/utils';
 
 describe('blockchain helpers', () => {
   it('detects supported chain ids', () => {

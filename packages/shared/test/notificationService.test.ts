@@ -6,7 +6,7 @@ import {
   updateUserNotificationPreferences,
   notifyResearchLogCreated,
   notifyMilestoneApproved,
-} from '../services/notificationService';
+} from '../src/services/notificationService';
 
 describe('Notification Service & Triggers', () => {
   it('manages user notification preferences', () => {

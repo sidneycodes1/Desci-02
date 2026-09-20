@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
-import { verifySession } from '@sciagent/auth/session';
+import { requireAppSession } from '../../../../../lib/app-session';
 import { createMilestoneSchema } from '../../../../../lib/validation/milestone';
 
 /**
@@ -13,15 +12,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
 
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
-
-    const supabase = createSupabaseClientFromToken(token);
+    const supabase = session.supabase;
 
     // Verify project access
     const { data: project } = await supabase
@@ -35,12 +30,12 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    const isOwner = project.owner_user_id === session.userId;
+    const isOwner = project.owner_user_id === session.appUserId;
     const { data: collaborator } = await supabase
       .from('project_collaborators')
       .select('*')
       .eq('project_id', id)
-      .eq('user_id', session.userId)
+      .eq('user_id', session.appUserId)
       .single();
 
     if (!isOwner && !collaborator) {
@@ -75,13 +70,9 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
 
     const body = await request.json();
     const validationResult = createMilestoneSchema.safeParse(body);
@@ -93,7 +84,7 @@ export async function POST(
       );
     }
 
-    const supabase = createSupabaseClientFromToken(token);
+    const supabase = session.supabase;
 
     // Verify ownership
     const { data: project } = await supabase
@@ -107,8 +98,18 @@ export async function POST(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    if (project.owner_user_id !== session.userId && session.role !== 'admin') {
-      return NextResponse.json({ error: 'Access denied: Only project owner or admin can create milestones' }, { status: 403 });
+    const isOwner = project.owner_user_id === session.appUserId;
+    const { data: collaborator } = await supabase
+      .from('project_collaborators')
+      .select('id')
+      .eq('project_id', id)
+      .eq('user_id', session.appUserId)
+      .single();
+
+    // Allow if: owner, collaborator, OR global admin
+    // Platform-admin override is intentional — per-project check is primary, global admin is deliberate fallback (not legacy).
+    if (!isOwner && !collaborator && session.role !== 'admin') {
+      return NextResponse.json({ error: 'Access denied: Only project owner, collaborators, or admin can create milestones' }, { status: 403 });
     }
 
     // Insert milestone
@@ -116,7 +117,7 @@ export async function POST(
       .from('milestones')
       .insert({
         project_id: id,
-        creator_user_id: session.userId,
+        creator_user_id: session.appUserId,
         title: validationResult.data.title,
         description_uri: validationResult.data.descriptionUri,
         state: 'created',

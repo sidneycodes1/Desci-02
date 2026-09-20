@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
-import { verifySession } from '@sciagent/auth/session';
+import { requireAppSession } from '../../../../../../../lib/app-session';
 import { approveMilestoneSchema } from '../../../../../../../lib/validation/milestone';
 import {
   processMilestoneApproval,
@@ -17,13 +16,9 @@ export async function POST(
 ) {
   try {
     const { id, milestoneId } = await params;
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
 
     const body = await request.json().catch(() => ({}));
     const validationResult = approveMilestoneSchema.safeParse(body);
@@ -35,7 +30,7 @@ export async function POST(
       );
     }
 
-    const supabase = createSupabaseClientFromToken(token);
+    const supabase = session.supabase;
 
     // Get project & owner wallet
     const { data: project } = await supabase
@@ -49,9 +44,31 @@ export async function POST(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    // Determine reviewer role
-    const isOwner = project.owner_user_id === session.userId;
-    const reviewerRole = session.role === 'admin' ? 'admin' : isOwner ? 'owner' : 'collaborator';
+    // Determine reviewer role: admin, owner, or funder
+    const isOwner = project.owner_user_id === session.appUserId;
+    // Platform-admin override is intentional — per-project check is primary, global admin is deliberate fallback (not legacy).
+    const isAdmin = session.role === 'admin';
+
+    // Check if user is a funder of this project (total_funded_wei > 0)
+    const { data: funderRow } = await supabase
+      .from('project_funders')
+      .select('*')
+      .eq('project_id', id)
+      .eq('user_id', session.appUserId)
+      .maybeSingle();
+
+    const isFunder = !!funderRow && BigInt(funderRow.total_funded_wei) > 0n;
+
+    let reviewerRole: 'admin' | 'owner' | 'funder' | 'collaborator' | 'viewer';
+    if (isAdmin) {
+      reviewerRole = 'admin';
+    } else if (isOwner) {
+      reviewerRole = 'owner';
+    } else if (isFunder) {
+      reviewerRole = 'funder';
+    } else {
+      reviewerRole = 'collaborator';
+    }
 
     // Get milestone entry
     const { data: milestone } = await supabase
@@ -94,7 +111,7 @@ export async function POST(
         creatorUserId: milestone.creator_user_id,
       },
       reviewerRole,
-      reviewerUserId: session.userId,
+      reviewerUserId: session.appUserId,
       projectOwnerWallet: ownerWalletAddress,
       releaseAmountWei: validationResult.data.releaseAmountWei,
       currentOnchainBalanceWei: currentBalanceWei,
@@ -112,7 +129,7 @@ export async function POST(
       .from('milestones')
       .update({
         state: 'approved',
-        reviewer_user_id: session.userId,
+        reviewer_user_id: session.appUserId,
         approved_at: new Date().toISOString(),
       })
       .eq('id', milestoneId)
@@ -131,7 +148,7 @@ export async function POST(
         .from('expenses')
         .insert({
           project_id: id,
-          proposer_user_id: session.userId,
+          proposer_user_id: session.appUserId,
           recipient_address: approval.releasePayload.recipientAddress,
           amount_wei: approval.releasePayload.amountWei,
           memo: approval.releasePayload.memo,

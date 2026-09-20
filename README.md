@@ -35,7 +35,7 @@ contracts.
 **Trust model:** Privy JWT → server-side session + RBAC → Supabase RLS
 (`auth.uid()`, user-scoped client) → on-chain access control. The chain is the
 source of truth for balances; Postgres caches it and reconciles (see
-[RECONCILIATION.md](./RECONCILIATION.md)).
+[docs/RECONCILIATION.md](./docs/RECONCILIATION.md)).
 
 ## Tech stack
 
@@ -60,10 +60,11 @@ packages/
   shared/                  Cross-cutting: supabase clients, env, privy, blockchain,
                            storage (Pinata), queues, AI, services, monitoring
   ui/                      Design system (Button, Card, Badge, Input, Modal, Spinner)
-AUTH.md  PROJECTS.md  MILESTONES.md  RESEARCH_LOGS.md  RECONCILIATION.md
-REPORTS.md  NOTIFICATIONS.md  SETTINGS.md  SECURITY.md  DEPLOYMENT.md
-KNOWN_LIMITATIONS.md  TESTING_GAPS.md
-apps/web/DASHBOARD.md          UI + API-integration notes
+README.md  SECURITY.md  KNOWN_LIMITATIONS.md  DEPLOYMENT.md
+docs/                        Feature docs (AUTH, PROJECTS, MILESTONES,
+                             RESEARCH_LOGS, RECONCILIATION, REPORTS,
+                             NOTIFICATIONS, SETTINGS, DASHBOARD, TESTING_GAPS)
+apps/web/                    (no loose docs — see docs/DASHBOARD.md)
 packages/agents/AGENTS.md      Agent architecture + queue
 packages/database/DATABASE.md  Schema, RLS, migrations, local dev
 packages/contracts/SECURITY.md Contract security + audit focus
@@ -101,6 +102,15 @@ Run the web app:
 
 ```bash
 pnpm --filter sciagent-web dev    # or: pnpm dev (all workspaces)
+# If 3000 is occupied (common on Windows), use 3100 — this has caused real confusion:
+PORT=3100 pnpm --filter sciagent-web dev   # → http://localhost:3100
+```
+
+Demo/preview (no real data, no API calls):
+
+```bash
+# After pnpm dev, visit http://localhost:3100/demo
+# 5 example projects + mock profile, persistent "Demo mode" banner, Like/Comment/Share/Fund/Create are visibly disabled
 ```
 
 ## Tests, typecheck, lint, build
@@ -125,16 +135,16 @@ Start here, then go deeper:
   production-ready (read before deploying)
 - [DEPLOYMENT.md](./DEPLOYMENT.md) — env, migrations, contract deploy, build
 - [SECURITY.md](./SECURITY.md) / [packages/contracts/SECURITY.md](./packages/contracts/SECURITY.md) — threat model + audit focus
-- [AUTH.md](./AUTH.md) — Privy flow + role matrix
-- [PROJECTS.md](./PROJECTS.md) — project CRUD, state machine, collaborators
-- [MILESTONES.md](./MILESTONES.md) — milestone lifecycle + fund release
-- [RESEARCH_LOGS.md](./RESEARCH_LOGS.md) — logs + IPFS evidence rules
-- [RECONCILIATION.md](./RECONCILIATION.md) — chain/DB treasury sync
-- [REPORTS.md](./REPORTS.md) — CSV/JSON export
-- [NOTIFICATIONS.md](./NOTIFICATIONS.md) — events + preferences
-- [SETTINGS.md](./SETTINGS.md) — user + project settings
-- [TESTING_GAPS.md](./TESTING_GAPS.md) — coverage + hardening report
-- [apps/web/DASHBOARD.md](./apps/web/DASHBOARD.md) — dashboard + UI system
+- [AUTH.md](./docs/AUTH.md) — Privy flow + role matrix
+- [PROJECTS.md](./docs/PROJECTS.md) — project CRUD, state machine, collaborators
+- [MILESTONES.md](./docs/MILESTONES.md) — milestone lifecycle + fund release
+- [RESEARCH_LOGS.md](./docs/RESEARCH_LOGS.md) — logs + IPFS evidence rules
+- [RECONCILIATION.md](./docs/RECONCILIATION.md) — chain/DB treasury sync
+- [REPORTS.md](./docs/REPORTS.md) — CSV/JSON export
+- [NOTIFICATIONS.md](./docs/NOTIFICATIONS.md) — events + preferences
+- [SETTINGS.md](./docs/SETTINGS.md) — user + project settings
+- [TESTING_GAPS.md](./docs/TESTING_GAPS.md) — coverage + hardening report
+- [docs/DASHBOARD.md](./docs/DASHBOARD.md) — dashboard + UI system
 - [packages/agents/AGENTS.md](./packages/agents/AGENTS.md) — agent architecture
 - [packages/database/DATABASE.md](./packages/database/DATABASE.md) — schema + RLS
 

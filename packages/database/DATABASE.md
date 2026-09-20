@@ -47,7 +47,7 @@ Indexes on all FKs + `(owner,status)`, `(project,status/state)`,
 - `treasury_balances` / `reputation_scores` / `ai_agent_runs`: no
   authenticated writes at all (service_role jobs only).
 - `reputation_events` inserts: project owner as oracle delegate (see Phase 4
-  role model in `AUTH.md`).
+  role model in `../../docs/AUTH.md`).
 - Mutual project/collaborator policy references use `SECURITY DEFINER`
   `plpgsql` helpers (`is_project_owner/member/visible`) — plain-SQL
   helpers inline and recurse (42P17); the role trigger is invoker on

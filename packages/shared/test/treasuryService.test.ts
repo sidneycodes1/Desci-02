@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   validateSpendRequest,
   reconcileProjectTreasuryState,
-} from '../services/treasuryService';
+} from '../src/services/treasuryService';
 
 describe('Treasury Service Logic & Budget Guards', () => {
   const sampleWallet = '0x1234567890123456789012345678901234567890';

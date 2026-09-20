@@ -61,7 +61,7 @@ describe('Role hierarchy', () => {
   it('permission matrix cannot silently drift - explicit lock test', () => {
     // This test explicitly locks in the permission matrix to prevent silent drift
     // If any of these assertions fail, it means the permission matrix has changed
-    // and needs to be reviewed against the AUTH.md documentation
+    // and needs to be reviewed against the docs/AUTH.md documentation
 
     // Admin: 12 permissions (all)
     expect(ROLE_PERMISSIONS.admin.length).toBe(12);

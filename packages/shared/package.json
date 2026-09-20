@@ -6,17 +6,24 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./env": "./env/index.ts",
-    "./env/client": "./env/client.ts",
-    "./env/server": "./env/server.ts",
-    "./supabase": "./supabase/index.ts",
-    "./privy": "./privy/index.ts",
-    "./blockchain": "./blockchain/index.ts",
-    "./queues": "./queues/index.ts",
-    "./storage": "./storage/index.ts",
-    "./ai": "./ai/index.ts",
-    "./monitoring": "./monitoring/index.ts",
-    "./services": "./services/index.ts"
+    "./env": "./src/env/index.ts",
+    "./env/client": "./src/env/client.ts",
+    "./env/server": "./src/env/server.ts",
+    "./supabase": "./src/supabase/index.ts",
+    "./supabase/server": "./src/supabase/server.ts",
+    "./supabase/client": "./src/supabase/client.ts",
+    "./privy": "./src/privy/index.ts",
+    "./blockchain": "./src/blockchain/index.ts",
+    "./queues": "./src/queues/index.ts",
+    "./storage": "./src/storage/index.ts",
+    "./ai": "./src/ai/index.ts",
+    "./monitoring": "./src/monitoring/index.ts",
+    "./services": "./src/services/index.ts",
+    "./services/milestoneService": "./src/services/milestoneService.ts",
+    "./services/notificationService": "./src/services/notificationService.ts",
+    "./services/reportService": "./src/services/reportService.ts",
+    "./services/treasuryService": "./src/services/treasuryService.ts",
+    "./*": "./src/*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -35,7 +42,9 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@sciagent/typescript-config": "workspace:*",
     "@vitest/coverage-v8": "^2.1.8",
+    "typescript": "5.5.4",
     "vitest": "^2.1.8"
   }
 }

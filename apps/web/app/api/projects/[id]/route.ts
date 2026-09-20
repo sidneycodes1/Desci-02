@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
-import { verifySession } from '@sciagent/auth/session';
+import { requireAppSession } from '../../../../lib/app-session';
 import { updateProjectSchema } from '../../../../lib/validation/project';
 import {
   validateStatusTransition,
@@ -15,15 +14,10 @@ import {
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
-
-    const supabase = createSupabaseClientFromToken(token);
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
+    const { appUserId, supabase } = session;
 
     const { data: project, error } = await supabase
       .from('projects')
@@ -37,12 +31,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Check access: owner or collaborator
-    const isOwner = project.owner_user_id === session.userId;
+    const isOwner = project.owner_user_id === appUserId;
     const { data: collaborator } = await supabase
       .from('project_collaborators')
       .select('*')
       .eq('project_id', id)
-      .eq('user_id', session.userId)
+      .eq('user_id', appUserId)
       .single();
 
     if (!isOwner && !collaborator) {
@@ -50,6 +44,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Determine user role for this project
+    // Platform-admin override is intentional — per-project check is primary, global admin is deliberate fallback (not legacy).
     let userRole: 'admin' | 'owner' | 'member' | 'viewer' = 'viewer';
     if (session.role === 'admin') {
       userRole = 'admin';
@@ -73,13 +68,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
+    const { appUserId, supabase } = session;
 
     const body = await request.json();
     const validationResult = updateProjectSchema.safeParse(body);
@@ -90,8 +82,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         { status: 400 }
       );
     }
-
-    const supabase = createSupabaseClientFromToken(token);
 
     // Check ownership
     const { data: project } = await supabase
@@ -105,7 +95,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    if (project.owner_user_id !== session.userId && session.role !== 'admin') {
+    const isOwner = project.owner_user_id === appUserId;
+    const { data: collaborator } = await supabase
+      .from('project_collaborators')
+      .select('id')
+      .eq('project_id', id)
+      .eq('user_id', appUserId)
+      .single();
+
+    // Allow if: owner, collaborator, OR global admin
+    // Platform-admin override is intentional — per-project check is primary, global admin is deliberate fallback (not legacy).
+    if (!isOwner && !collaborator && session.role !== 'admin') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -161,15 +161,10 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
-
-    const supabase = createSupabaseClientFromToken(token);
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
+    const { appUserId, supabase } = session;
 
     // Check ownership
     const { data: project } = await supabase
@@ -183,7 +178,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    if (project.owner_user_id !== session.userId && session.role !== 'admin') {
+    const isOwner = project.owner_user_id === appUserId;
+    const { data: collaborator } = await supabase
+      .from('project_collaborators')
+      .select('id')
+      .eq('project_id', id)
+      .eq('user_id', appUserId)
+      .single();
+
+    // Allow if: owner, collaborator, OR global admin
+    // Platform-admin override is intentional — per-project check is primary, global admin is deliberate fallback (not legacy).
+    if (!isOwner && !collaborator && session.role !== 'admin') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 

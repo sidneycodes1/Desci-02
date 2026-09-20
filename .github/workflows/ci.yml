@@ -32,6 +32,9 @@ jobs:
       - name: Run Workspace Typecheck
         run: pnpm typecheck
 
+      - name: Run Workspace Lint
+        run: pnpm lint
+
       - name: Run Workspace Unit & Integration Tests
         run: pnpm test
 

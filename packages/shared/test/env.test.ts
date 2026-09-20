@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 
-import { parseClientEnv, resetClientEnvCache } from '../env/client';
-import { parseServerEnv, resetServerEnvCache } from '../env/server';
+import { parseClientEnv, resetClientEnvCache } from '../src/env/client';
+import { parseServerEnv, resetServerEnvCache } from '../src/env/server';
 
 const baseEnvironment = {
   NODE_ENV: 'test',

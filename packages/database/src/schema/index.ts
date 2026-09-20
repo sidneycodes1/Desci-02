@@ -6,3 +6,6 @@ export * from './treasury';
 export * from './reputation';
 export * from './agentRuns';
 export * from './researchLogs';
+export * from './funding';
+export * from './articles';
+export * from './engagement';

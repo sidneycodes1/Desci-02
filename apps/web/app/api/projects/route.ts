@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
-import { verifySession } from '@sciagent/auth/session';
+import { requireAppSession } from '../../../lib/app-session';
 import { createProjectSchema } from '../../../lib/validation/project';
 
 /**
@@ -10,21 +9,16 @@ import { createProjectSchema } from '../../../lib/validation/project';
  */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
-
-    const supabase = createSupabaseClientFromToken(token);
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
+    const { appUserId, supabase } = session;
 
     // Get projects where user is owner or collaborator
     const { data: ownerProjects, error: ownerError } = await supabase
       .from('projects')
       .select('*')
-      .eq('owner_user_id', session.userId)
+      .eq('owner_user_id', appUserId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
@@ -36,7 +30,7 @@ export async function GET(request: NextRequest) {
     const { data: collaboratorProjects, error: collaboratorError } = await supabase
       .from('project_collaborators')
       .select('projects(*)')
-      .eq('user_id', session.userId)
+      .eq('user_id', appUserId)
       .is('projects.deleted_at', null);
 
     if (collaboratorError) {
@@ -60,22 +54,17 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/projects - Create a new project
- * Requires authentication and minimum 'owner' role
+ * Plan §09: ANY authenticated wallet can create; creator becomes the
+ * project owner (`owner_user_id`). Global Privy role gates admin
+ * endpoints only — never creation. Edit stays per-project
+ * (owner or invited collaborator).
  */
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
-
-    // Check role - only owners and above can create projects
-    if (session.role !== 'owner' && session.role !== 'admin') {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
+    const { appUserId, supabase } = session;
 
     const body = await request.json();
     const validationResult = createProjectSchema.safeParse(body);
@@ -89,12 +78,10 @@ export async function POST(request: NextRequest) {
 
     const { name, metadataUri, status } = validationResult.data;
 
-    const supabase = createSupabaseClientFromToken(token);
-
     const { data: project, error } = await supabase
       .from('projects')
       .insert({
-        owner_user_id: session.userId,
+        owner_user_id: appUserId,
         name,
         metadata_uri: metadataUri,
         status: status || 'draft',

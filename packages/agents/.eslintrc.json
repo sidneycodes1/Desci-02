@@ -1,0 +1,3 @@
+{
+  "extends": ["@sciagent/eslint-config/base"]
+}

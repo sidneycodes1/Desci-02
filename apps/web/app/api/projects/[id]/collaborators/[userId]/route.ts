@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
-import { verifySession } from '@sciagent/auth/session';
+import { requireAppSession } from '../../../../../../lib/app-session';
 
 /**
  * DELETE /api/projects/[id]/collaborators/[userId] - Remove a collaborator
@@ -13,15 +12,11 @@ export async function DELETE(
 ) {
   try {
     const { id, userId } = await params;
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
 
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
-
-    const supabase = createSupabaseClientFromToken(token);
+    const supabase = session.supabase;
 
     // Check ownership
     const { data: project } = await supabase
@@ -35,7 +30,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    if (project.owner_user_id !== session.userId && session.role !== 'admin') {
+    // Platform-admin override is intentional — per-project check is primary, global admin is deliberate fallback (not legacy).
+    if (project.owner_user_id !== session.appUserId && session.role !== 'admin') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 

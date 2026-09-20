@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
-import { verifySession } from '@sciagent/auth/session';
+import { requireAppSession } from '../../../../../lib/app-session';
 import { createResearchLogSchema } from '../../../../../lib/validation/researchLog';
 import { notifyResearchLogCreated } from '@sciagent/shared/services/notificationService';
 
@@ -15,15 +14,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
 
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
-
-    const supabase = createSupabaseClientFromToken(token);
+    const supabase = session.supabase;
 
     // Verify project access
     const { data: project } = await supabase
@@ -37,12 +32,12 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    const isOwner = project.owner_user_id === session.userId;
+    const isOwner = project.owner_user_id === session.appUserId;
     const { data: collaborator } = await supabase
       .from('project_collaborators')
       .select('*')
       .eq('project_id', id)
-      .eq('user_id', session.userId)
+      .eq('user_id', session.appUserId)
       .single();
 
     if (!isOwner && !collaborator) {
@@ -79,13 +74,9 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
 
     const body = await request.json();
     const validationResult = createResearchLogSchema.safeParse(body);
@@ -97,7 +88,7 @@ export async function POST(
       );
     }
 
-    const supabase = createSupabaseClientFromToken(token);
+    const supabase = session.supabase;
 
     // Verify project access
     const { data: project } = await supabase
@@ -111,12 +102,12 @@ export async function POST(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    const isOwner = project.owner_user_id === session.userId;
+    const isOwner = project.owner_user_id === session.appUserId;
     const { data: collaborator } = await supabase
       .from('project_collaborators')
       .select('*')
       .eq('project_id', id)
-      .eq('user_id', session.userId)
+      .eq('user_id', session.appUserId)
       .single();
 
     if (!isOwner && !collaborator) {
@@ -128,7 +119,7 @@ export async function POST(
       .from('research_logs')
       .insert({
         project_id: id,
-        author_user_id: session.userId,
+        author_user_id: session.appUserId,
         title: validationResult.data.title,
         content: validationResult.data.content,
         evidence_cid: validationResult.data.evidenceCid ?? null,
@@ -144,7 +135,7 @@ export async function POST(
     }
 
     notifyResearchLogCreated({
-      authorUserId: session.userId,
+      authorUserId: session.appUserId,
       projectOwnerUserId: project.owner_user_id,
       projectId: id,
       logTitle: validationResult.data.title,

@@ -1,7 +1,6 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "@sciagent/typescript-config/library.json",
   "compilerOptions": {
-    "noEmit": true,
     "rootDir": "."
   },
   "include": ["**/*.ts", "**/*.tsx"],

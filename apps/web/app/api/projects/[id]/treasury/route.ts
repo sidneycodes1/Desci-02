@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
-import { verifySession } from '@sciagent/auth/session';
+import { requireAppSession } from '../../../../../lib/app-session';
 
 /**
  * GET /api/projects/[id]/treasury - Fetch treasury balance & sync status for a project
@@ -12,15 +11,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
 
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
-
-    const supabase = createSupabaseClientFromToken(token);
+    const supabase = session.supabase;
 
     // Verify project access
     const { data: project } = await supabase
@@ -34,12 +29,12 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    const isOwner = project.owner_user_id === session.userId;
+    const isOwner = project.owner_user_id === session.appUserId;
     const { data: collaborator } = await supabase
       .from('project_collaborators')
       .select('*')
       .eq('project_id', id)
-      .eq('user_id', session.userId)
+      .eq('user_id', session.appUserId)
       .single();
 
     if (!isOwner && !collaborator) {

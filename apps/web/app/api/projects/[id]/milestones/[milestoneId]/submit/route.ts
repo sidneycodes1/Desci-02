@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
-import { verifySession } from '@sciagent/auth/session';
+import { requireAppSession } from '../../../../../../../lib/app-session';
 import { submitMilestoneProofSchema } from '../../../../../../../lib/validation/milestone';
-import {
-  validateMilestoneTransition,
-  type MilestoneState,
-} from '@sciagent/shared/services/milestoneService';
 
 /**
  * POST /api/projects/[id]/milestones/[milestoneId]/submit - Submit proof URI for a milestone
@@ -17,13 +12,9 @@ export async function POST(
 ) {
   try {
     const { id, milestoneId } = await params;
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
 
     const body = await request.json();
     const validationResult = submitMilestoneProofSchema.safeParse(body);
@@ -35,7 +26,7 @@ export async function POST(
       );
     }
 
-    const supabase = createSupabaseClientFromToken(token);
+    const supabase = session.supabase;
 
     // Get milestone entry
     const { data: milestone } = await supabase
@@ -46,30 +37,32 @@ export async function POST(
       .is('deleted_at', null)
       .single();
 
+    // Get project for owner/collaborator check
+    const { data: project } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .single();
+
     if (!milestone) {
       return NextResponse.json({ error: 'Milestone not found' }, { status: 404 });
     }
 
-    // Validate transition state
-    const transitionCheck = validateMilestoneTransition(
-      milestone.state as MilestoneState,
-      'submitted'
-    );
-    if (!transitionCheck.valid) {
-      return NextResponse.json({ error: transitionCheck.error }, { status: 400 });
-    }
+    const isCreator = milestone.creator_user_id === session.appUserId;
 
-    // Permission check: Creator or project owner
-    const { data: project } = await supabase.from('projects').select('*').eq('id', id).single();
+    const isOwner = project.owner_user_id === session.appUserId;
+    const { data: collaborator } = await supabase
+      .from('project_collaborators')
+      .select('id')
+      .eq('project_id', id)
+      .eq('user_id', session.appUserId)
+      .single();
 
-    const isCreator = milestone.creator_user_id === session.userId;
-    const isOwner = project?.owner_user_id === session.userId || session.role === 'admin';
-
-    if (!isCreator && !isOwner) {
-      return NextResponse.json(
-        { error: 'Access denied: Only milestone creator or project owner can submit proof' },
-        { status: 403 }
-      );
+    // Allow if: creator, owner, collaborator, OR global admin
+    // Platform-admin override is intentional — per-project check is primary, global admin is deliberate fallback (not legacy).
+    if (!isCreator && !isOwner && !collaborator && session.role !== 'admin') {
+      return NextResponse.json({ error: 'Access denied: Only milestone creator, owner, collaborators, or admin can submit proof' }, { status: 403 });
     }
 
     // Update milestone state to submitted

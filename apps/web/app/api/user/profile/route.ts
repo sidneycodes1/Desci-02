@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseClientFromToken } from '@sciagent/shared/supabase/server';
-import { verifySession } from '@sciagent/auth/session';
+import { requireAppSession } from '../../../../lib/app-session';
 import { updateProfileSchema } from '../../../../lib/validation/profile';
 
 /**
@@ -8,19 +7,15 @@ import { updateProfileSchema } from '../../../../lib/validation/profile';
  */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
-    const supabase = createSupabaseClientFromToken(token);
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
+    const supabase = session.supabase;
 
     const { data: user, error } = await supabase
       .from('users')
       .select('*, wallets(*)')
-      .eq('id', session.userId)
+      .eq('id', session.appUserId)
       .single();
 
     if (error || !user) {
@@ -39,13 +34,9 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing Authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const session = await verifySession(token);
+    const ctx = await requireAppSession(request);
+    if (!ctx.ok) return ctx.response;
+    const session = ctx.session;
 
     const body = await request.json();
     const validation = updateProfileSchema.safeParse(body);
@@ -57,7 +48,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const supabase = createSupabaseClientFromToken(token);
+    const supabase = session.supabase;
 
     const { displayName, bio, orcidId } = validation.data;
     const updates: Record<string, string | null> = {
@@ -70,7 +61,7 @@ export async function PUT(request: NextRequest) {
     const { data: updatedUser, error } = await supabase
       .from('users')
       .update(updates)
-      .eq('id', session.userId)
+      .eq('id', session.appUserId)
       .select()
       .single();
 

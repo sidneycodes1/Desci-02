@@ -3,7 +3,7 @@ import {
   validateMilestoneTransition,
   processMilestoneApproval,
   MilestoneRecord,
-} from '../services/milestoneService';
+} from '../src/services/milestoneService';
 
 describe('Milestone Service', () => {
   describe('validateMilestoneTransition', () => {
@@ -95,6 +95,38 @@ describe('Milestone Service', () => {
       expect(result.releasePayload).toEqual({
         recipientAddress: '0xOwnerWallet',
         amountWei: '500000',
+        memo: 'Milestone Approval Payout: Milestone 1 (ID: m-1)',
+      });
+    });
+
+    it('approves milestone as funder without automatic fund release', () => {
+      const result = processMilestoneApproval({
+        milestone: mockMilestone,
+        reviewerRole: 'funder',
+        reviewerUserId: 'user-funder',
+        projectOwnerWallet: '0xOwnerWallet',
+        currentOnchainBalanceWei: '1000000',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.fundReleaseTriggered).toBe(false);
+    });
+
+    it('approves milestone as funder with fund release when releaseAmountWei specified and balance sufficient', () => {
+      const result = processMilestoneApproval({
+        milestone: mockMilestone,
+        reviewerRole: 'funder',
+        reviewerUserId: 'user-funder',
+        projectOwnerWallet: '0xOwnerWallet',
+        releaseAmountWei: '200000',
+        currentOnchainBalanceWei: '1000000',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.fundReleaseTriggered).toBe(true);
+      expect(result.releasePayload).toEqual({
+        recipientAddress: '0xOwnerWallet',
+        amountWei: '200000',
         memo: 'Milestone Approval Payout: Milestone 1 (ID: m-1)',
       });
     });

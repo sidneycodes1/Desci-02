@@ -10,7 +10,7 @@ all `/api/*` route handlers.
   (workspace with 5 tabs). Projects, logs, milestones, treasury balance, and
   expenses come live from the API via TanStack Query. Exception: the AI
   health-score badges are still hardcoded placeholders — see
-  `KNOWN_LIMITATIONS.md` §4.
+  `../../KNOWN_LIMITATIONS.md` §4.
 - **API:** `app/api/projects/**`, `app/api/notifications`, `app/api/user/*`.
   Every route verifies the Privy Bearer JWT (`@sciagent/auth/session`) and
   queries Postgres through the **user-scoped** Supabase client
@@ -19,7 +19,7 @@ all `/api/*` route handlers.
   `lib/state-machine/project.ts`, route middleware in `middleware.ts`,
   error boundary in `app/global-error.tsx`.
 - **Dev auth:** pages currently send a placeholder token centralized in
-  `lib/dev-auth.ts` — see `KNOWN_LIMITATIONS.md` §3. Replace with the real
+  `lib/dev-auth.ts` — see `../../KNOWN_LIMITATIONS.md` §3. Replace with the real
   Privy `getAccessToken()` flow before production.
 
 ## Commands
@@ -32,4 +32,4 @@ pnpm --filter sciagent-web typecheck
 pnpm --filter sciagent-web lint
 ```
 
-See [DASHBOARD.md](./DASHBOARD.md) for UI + API-integration details.
+See [DASHBOARD.md](../../docs/DASHBOARD.md) for UI + API-integration details.

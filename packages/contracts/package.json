@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "main": "src/index.ts",
+  "turbo": {
+    "tasks": {
+      "build": {
+        "outputs": ["out/**"]
+      }
+    }
+  },
   "scripts": {
     "build": "node scripts/forge-runner.cjs build",
     "test": "node scripts/forge-runner.cjs test",

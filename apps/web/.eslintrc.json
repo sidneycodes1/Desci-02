@@ -1,0 +1,18 @@
+{
+  "extends": ["@sciagent/eslint-config/base"],
+  "overrides": [
+    {
+      "files": ["app/api/**/*.ts", "app/api/**/*.tsx"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "name": "@sciagent/shared/supabase/server",
+            "importNames": ["getSupabaseAdminClient"],
+            "message": "DO NOT use getSupabaseAdminClient in user-facing API routes - it bypasses RLS. Use createSupabaseClientFromToken(token) instead to pass the Privy JWT so auth.uid() resolves correctly in RLS policies."
+          }
+        ]
+      }
+    }
+  ]
+}

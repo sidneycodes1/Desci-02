@@ -35,6 +35,12 @@ describe('schema: tables exist', () => {
     'reputation_scores',
     'ai_agent_runs',
     'research_logs',
+    'project_funders',
+    'invites',
+    'articles',
+    'article_collaborators',
+    'likes',
+    'comments',
   ];
   for (const table of tables) {
     it(`has table ${table}`, async () => {
@@ -44,7 +50,7 @@ describe('schema: tables exist', () => {
 });
 
 describe('schema: RLS enabled everywhere', () => {
-  it('all 11 tables have rowsecurity on', async () => {
+  it('all 17 tables have rowsecurity on', async () => {
     const rows = await ctx.db.execute(sql`
       SELECT tablename FROM pg_tables
       WHERE schemaname = 'public' AND rowsecurity = true`);
@@ -62,6 +68,12 @@ describe('schema: RLS enabled everywhere', () => {
         'research_logs',
         'users',
         'wallets',
+        'project_funders',
+        'invites',
+        'articles',
+        'article_collaborators',
+        'likes',
+        'comments',
       ].sort()
     );
   });
@@ -88,6 +100,12 @@ describe('schema: RLS enabled everywhere', () => {
       'reputation_scores',
       'ai_agent_runs',
       'research_logs',
+      'project_funders',
+      'invites',
+      'articles',
+      'article_collaborators',
+      'likes',
+      'comments',
     ]) {
       expect(byTable.get(t) ?? 0, `policies on ${t}`).toBeGreaterThan(0);
     }
