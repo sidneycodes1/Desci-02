@@ -39,6 +39,7 @@ jobs:
         run: pnpm test
 
       - name: Run Workspace Production Build
+        if: always()
         run: pnpm build
 
   foundry-tests:
