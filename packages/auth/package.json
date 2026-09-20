@@ -22,10 +22,7 @@
   "dependencies": {
     "@privy-io/server-auth": "^1.32.5",
     "@sciagent/shared": "workspace:*",
-    "@supabase/ssr": "^0.7.0",
-    "jose": "^5.10.0",
-    "svix": "^1.29.0",
-    "ts-case-convert": "^2.3.1"
+    "@supabase/ssr": "^0.7.0"
   },
   "devDependencies": {
     "@sciagent/typescript-config": "workspace:*",

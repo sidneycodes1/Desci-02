@@ -16,7 +16,6 @@
     "@sciagent/shared": "workspace:*",
     "@sentry/nextjs": "^8.50.0",
     "@tanstack/react-query": "^5.90.0",
-    "drizzle-orm": "^0.44.4",
     "next": "15.2.6",
     "react": "18.3.1",
     "react-dom": "18.3.1",
@@ -25,6 +24,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.9",
+    "@playwright/test": "1.63.0",
     "@sciagent/typescript-config": "workspace:*",
     "@types/node": "^20.14.2",
     "@types/react": "^18.3.3",

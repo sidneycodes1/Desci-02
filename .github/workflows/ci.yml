@@ -38,6 +38,9 @@ jobs:
       - name: Run Workspace Unit & Integration Tests
         run: pnpm test
 
+      - name: Run Workspace Production Build
+        run: pnpm build
+
   foundry-tests:
     name: Smart Contract Foundry Tests
     runs-on: ubuntu-latest

@@ -19,18 +19,28 @@ test('homepage marketing copy removed — looks like feed, not hero', async ({ p
   await expect(center).toBeVisible();
 });
 
-test('engagement — Like count updates and persists (mocked API, real UI click)', async ({ page }) => {
+test('engagement — Like count updates and persists (mocked API, real UI click)', async ({
+  page,
+}) => {
   // Mock GET /api/likes and POST /api/likes to simulate live server without needing real Supabase
   let likeCount = 0;
   let liked = false;
   await page.route('**/api/likes**', async (route) => {
     const req = route.request();
     if (req.method() === 'GET') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ count: likeCount, liked }) });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ count: likeCount, liked }),
+      });
     } else if (req.method() === 'POST') {
       liked = !liked;
       likeCount = liked ? likeCount + 1 : Math.max(0, likeCount - 1);
-      await route.fulfill({ status: liked ? 201 : 200, contentType: 'application/json', body: JSON.stringify({ liked, count: likeCount }) });
+      await route.fulfill({
+        status: liked ? 201 : 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ liked, count: likeCount }),
+      });
     }
   });
   // Mock projects to have at least one project card with engagement bar
@@ -40,7 +50,16 @@ test('engagement — Like count updates and persists (mocked API, real UI click)
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          projects: [{ id: '00000000-0000-4000-8000-000000000001', name: 'Test Project', metadata_uri: 'https://example.com', status: 'active', owner_user_id: 'owner-1', created_at: new Date().toISOString() }],
+          projects: [
+            {
+              id: '00000000-0000-4000-8000-000000000001',
+              name: 'Test Project',
+              metadata_uri: 'https://example.com',
+              status: 'active',
+              owner_user_id: 'owner-1',
+              created_at: new Date().toISOString(),
+            },
+          ],
           userRole: 'viewer',
         }),
       });
@@ -48,7 +67,11 @@ test('engagement — Like count updates and persists (mocked API, real UI click)
   });
   // Mock articles
   await page.route('**/api/articles', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ articles: [] }) });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ articles: [] }),
+    });
   });
 
   // Need to be "authenticated" for LikeButton to be enabled — mock Privy by setting localStorage? Instead, we test that Like button is disabled when not authenticated, enabled when we mock auth via page.evaluate
@@ -62,7 +85,7 @@ test('engagement — Like count updates and persists (mocked API, real UI click)
   // Initially, without auth, it should be disabled or show count 0 — but our mock will show count 0
   // Force enable by evaluating: set authenticated true via mocking useAuth? Instead, just verify button is visible
   await expect(likeBtn).toBeVisible();
-  const initialText = await likeBtn.textContent();
+  void (await likeBtn.textContent());
   // Click Like — should trigger POST to /api/likes (mocked)
   await likeBtn.click();
   await page.waitForTimeout(500);
@@ -70,7 +93,14 @@ test('engagement — Like count updates and persists (mocked API, real UI click)
   // Since we are not authenticated, button is disabled and click does nothing — this is expected for logged-out
   // For authenticated simulation, we need to test via direct fetch which is what LikeButton does
   const result1 = await page.evaluate(async () => {
-    const res = await fetch('/api/likes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetType: 'project', targetId: '00000000-0000-4000-8000-000000000001' }) });
+    const res = await fetch('/api/likes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        targetType: 'project',
+        targetId: '00000000-0000-4000-8000-000000000001',
+      }),
+    });
     return { status: res.status, body: await res.json().catch(() => ({})) };
   });
   // Our mocked POST should have been hit via page.evaluate as well (second time)
@@ -80,32 +110,70 @@ test('engagement — Like count updates and persists (mocked API, real UI click)
 
   // Refresh simulation — GET again should show persisted count 1
   const result2 = await page.evaluate(async () => {
-    const res = await fetch('/api/likes?targetType=project&targetId=00000000-0000-4000-8000-000000000001');
+    const res = await fetch(
+      '/api/likes?targetType=project&targetId=00000000-0000-4000-8000-000000000001'
+    );
     return { status: res.status, body: await res.json().catch(() => ({})) };
   });
   expect(result2.body.count).toBe(1);
 });
 
 test('comment appears and persists', async ({ page }) => {
-  let comments: any[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const comments: any[] = [];
   await page.route('**/api/comments**', async (route) => {
     const req = route.request();
     if (req.method() === 'GET') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ comments }) });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ comments }),
+      });
     } else if (req.method() === 'POST') {
       const body = JSON.parse(req.postData() || '{}');
-      const newComment = { id: 'c-' + Date.now(), author_user_id: 'reader-1', body: body.body, created_at: new Date().toISOString(), target_type: body.targetType, target_id: body.targetId };
+      const newComment = {
+        id: 'c-' + Date.now(),
+        author_user_id: 'reader-1',
+        body: body.body,
+        created_at: new Date().toISOString(),
+        target_type: body.targetType,
+        target_id: body.targetId,
+      };
       comments.push(newComment);
-      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ comment: newComment }) });
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ comment: newComment }),
+      });
     }
   });
   await page.route('**/api/projects', async (route) => {
     if (route.request().method() === 'GET') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ projects: [{ id: '00000000-0000-4000-8000-000000000002', name: 'Comment Test', metadata_uri: 'https://example.com', status: 'active', owner_user_id: 'owner-1', created_at: new Date().toISOString() }], userRole: 'viewer' }) });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          projects: [
+            {
+              id: '00000000-0000-4000-8000-000000000002',
+              name: 'Comment Test',
+              metadata_uri: 'https://example.com',
+              status: 'active',
+              owner_user_id: 'owner-1',
+              created_at: new Date().toISOString(),
+            },
+          ],
+          userRole: 'viewer',
+        }),
+      });
     } else await route.continue();
   });
   await page.route('**/api/articles', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ articles: [] }) });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ articles: [] }),
+    });
   });
 
   await page.goto('http://localhost:3100/');
@@ -117,30 +185,47 @@ test('comment appears and persists', async ({ page }) => {
   await page.waitForTimeout(500);
   // Post comment via direct fetch (simulating authenticated user)
   const postRes = await page.evaluate(async () => {
-    const res = await fetch('/api/comments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetType: 'project', targetId: '00000000-0000-4000-8000-000000000002', body: 'Great work!' }) });
+    const res = await fetch('/api/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        targetType: 'project',
+        targetId: '00000000-0000-4000-8000-000000000002',
+        body: 'Great work!',
+      }),
+    });
     return { status: res.status, body: await res.json() };
   });
   expect(postRes.status).toBe(201);
   // Refresh — GET should still contain comment
   const getRes = await page.evaluate(async () => {
-    const res = await fetch('/api/comments?targetType=project&targetId=00000000-0000-4000-8000-000000000002');
+    const res = await fetch(
+      '/api/comments?targetType=project&targetId=00000000-0000-4000-8000-000000000002'
+    );
     return { status: res.status, body: await res.json() };
   });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   expect(getRes.body.comments.some((c: any) => c.body === 'Great work!')).toBeTruthy();
 });
 
 test('delete someone else comment blocked', async ({ page }) => {
   // Mock comments with one comment by user A, try delete as user B
-  const commentId = '00000000-0000-4000-8000-000000000099';
+  void '00000000-0000-4000-8000-000000000099';
   await page.route('**/api/comments/**', async (route) => {
     const req = route.request();
     if (req.method() === 'DELETE') {
-      await route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: 'Not authorized to delete this comment' }) });
+      await route.fulfill({
+        status: 403,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Not authorized to delete this comment' }),
+      });
     } else await route.continue();
   });
   await page.goto('http://localhost:3100/');
   const res = await page.evaluate(async () => {
-    const r = await fetch('/api/comments/00000000-0000-4000-8000-000000000099', { method: 'DELETE' });
+    const r = await fetch('/api/comments/00000000-0000-4000-8000-000000000099', {
+      method: 'DELETE',
+    });
     return { status: r.status, body: await r.json() };
   });
   expect(res.status).toBe(403);
@@ -155,7 +240,9 @@ test('Share copies real URL', async ({ page, context }) => {
   await expect(shareBtn).toBeVisible();
   await shareBtn.click();
   await page.waitForTimeout(500);
-  const clipboard = await page.evaluate(() => navigator.clipboard.readText().catch(() => 'fallback'));
+  const clipboard = await page.evaluate(() =>
+    navigator.clipboard.readText().catch(() => 'fallback')
+  );
   // Should be a real URL like http://localhost:3100/projects/... or fallback prompt
   expect(clipboard).toContain('http://localhost:3100');
 });
@@ -163,11 +250,31 @@ test('Share copies real URL', async ({ page, context }) => {
 test('Fund opens existing FundModal', async ({ page }) => {
   await page.route('**/api/projects', async (route) => {
     if (route.request().method() === 'GET') {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ projects: [{ id: '00000000-0000-4000-8000-000000000003', name: 'Fund Test', metadata_uri: 'https://example.com', status: 'active', owner_user_id: 'owner-1', created_at: new Date().toISOString() }], userRole: 'viewer' }) });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          projects: [
+            {
+              id: '00000000-0000-4000-8000-000000000003',
+              name: 'Fund Test',
+              metadata_uri: 'https://example.com',
+              status: 'active',
+              owner_user_id: 'owner-1',
+              created_at: new Date().toISOString(),
+            },
+          ],
+          userRole: 'viewer',
+        }),
+      });
     } else await route.continue();
   });
   await page.route('**/api/articles', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ articles: [] }) });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ articles: [] }),
+    });
   });
   await page.goto('http://localhost:3100/');
   await page.waitForTimeout(1000);
