@@ -36,11 +36,23 @@ jobs:
         run: pnpm lint
 
       - name: Run Workspace Unit & Integration Tests
-        run: pnpm test
+        shell: bash
+        run: set -o pipefail && pnpm test 2>&1 | tee test.log
 
       - name: Run Workspace Production Build
         if: always()
-        run: pnpm build
+        shell: bash
+        run: set -o pipefail && pnpm build 2>&1 | tee build.log
+
+      - name: Upload CI logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-${{ github.run_id }}
+          path: |
+            test.log
+            build.log
+          if-no-files-found: warn
 
   foundry-tests:
     name: Smart Contract Foundry Tests
