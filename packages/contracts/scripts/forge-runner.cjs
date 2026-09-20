@@ -4,7 +4,10 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const packageRoot = path.resolve(__dirname, '..');
-const forgePath = path.join(process.env.USERPROFILE || os.homedir(), '.foundry', 'bin', 'forge.exe');
+const isWindows = os.platform() === 'win32';
+const forgeBinary = isWindows ? 'forge.exe' : 'forge';
+const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
+const forgePath = path.join(homeDir, '.foundry', 'bin', forgeBinary);
 const tempRoot = path.join(os.tmpdir(), 'sciagent-contracts');
 const outDir = path.join(tempRoot, 'out');
 const cacheDir = path.join(tempRoot, 'cache');
